@@ -403,7 +403,7 @@ def clean_attacker_label(s: str) -> str:
     s = s.replace("Touches in box per 90", "Touches in box")
     s = s.replace("Progressive passes per 90", "Progressive Passes")
     s = s.replace("Progressive runs per 90", "Progressive runs")
-     s = s.replace("Smart passes per 90", "Smart Passes")
+    s = s.replace("Smart passes per 90", "Smart Passes")
     s = s.replace("Passes to penalty area per 90", "Passes to Pen area")
     s = s.replace("Accurate passes, %", "Pass %")
     return s
