@@ -1052,7 +1052,7 @@ st.header("🧭 Similar players (within adjustable pool)")
 
 # --- Feature basket declared FIRST so UI can use it ---
 SIM_FEATURES = [
-     'Defensive duels per 90',
+    'Defensive duels per 90',
     'Aerial duels per 90', 'Aerial duels won, %',
     'PAdj Interceptions', 'xG per 90', 'Non-penalty goals per 90', 'Shots per 90',
     'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
@@ -1154,7 +1154,7 @@ with st.expander("Similarity settings", expanded=False):
         disabled=not apply_league_adjust
     )
 
-    # Always-available advanced weights (no toggle)
+    # Always-available advanced feature weights (no toggle)
     with st.expander("Advanced feature weights (1–5)", expanded=False):
         adv_weights = {}
         for f in SIM_FEATURES:
@@ -1164,6 +1164,15 @@ with st.expander("Similarity settings", expanded=False):
             adv_weights[f] = st.slider(f"Weight — {f}", 1, 5, default_val, key=key)
 
     top_n_sim = st.number_input("Show top N", min_value=5, max_value=200, value=50, step=5, key="sim_top")
+
+# ---- SAFETY GUARD: ensure sim_leagues exists even on first render ----
+try:
+    sim_leagues  # already defined by the widget
+except NameError:
+    try:
+        sim_leagues = _included_leagues_cf[:]  # from our local preset build above
+    except NameError:
+        sim_leagues = sorted(df.get('League', pd.Series([])).dropna().unique().tolist())
 
 # --- Similarity computation ---
 if not player_row.empty:
@@ -1180,12 +1189,11 @@ if not player_row.empty:
             (df_candidates['League strength'] <= float(sim_max_strength))
         ]
 
-    # --- enforce CF-only (no toggle) ---
+    # attacker filter
     if 'Position' in df_candidates.columns:
-        df_candidates = df_candidates[df_candidates['Position'].astype(str).str.startswith('CF')]
+        df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
     else:
-        st.warning("No 'Position' column found; cannot filter to CF.")
-    # -----------------------------------
+        st.warning("No 'Position' column found; cannot filter to attackers.")
 
     # base filters
     df_candidates = df_candidates[
@@ -1196,9 +1204,10 @@ if not player_row.empty:
     df_candidates = df_candidates[df_candidates['Player'] != player_name]
 
     if not df_candidates.empty:
-        # percentile ranks within candidate pool (per-league for robustness)
+        # percentile ranks within candidate pool (per-league)
         percl = df_candidates.groupby('League')[SIM_FEATURES].rank(pct=True)
-        # target percentiles computed on df global per-league
+
+        # target percentiles computed on df (per-league)
         target_percentiles = df.groupby('League')[SIM_FEATURES].rank(pct=True).loc[df['Player'] == player_name]
 
         # standardize on candidate pool
@@ -1206,14 +1215,14 @@ if not player_row.empty:
         standardized_features = scaler.fit_transform(df_candidates[SIM_FEATURES])
         target_features_standardized = scaler.transform([target_row_full[SIM_FEATURES].values])
 
-        # feature weights vector (from sliders)
+        # feature weights
         weights_vec = np.array([float(adv_weights.get(f, 1)) for f in SIM_FEATURES], dtype=float)
 
         percentile_distances = np.linalg.norm((percl.values - target_percentiles.values) * weights_vec, axis=1)
         actual_value_distances = np.linalg.norm((standardized_features - target_features_standardized) * weights_vec, axis=1)
         combined = percentile_distances * percentile_weight + actual_value_distances * (1.0 - percentile_weight)
 
-        # robust normalization -> similarity 0..100
+        # normalize -> similarity 0..100
         arr = np.asarray(combined, dtype=float).ravel()
         rng = np.ptp(arr)
         norm = (arr - arr.min()) / (rng if rng != 0 else 1.0)
@@ -1223,7 +1232,7 @@ if not player_row.empty:
         out['League strength'] = out['League'].map(LS_MAP).fillna(0.0) if LS_MAP else 0.0
         tgt_ls = float(LS_MAP.get(target_league, 1.0)) if LS_MAP else 1.0
 
-        # Symmetric, always ≤ 1: penalize differences in either direction (stronger or weaker)
+        # symmetric penalty for league differences (≤1)
         eps = 1e-6
         cand_ls = np.maximum(out['League strength'].astype(float), eps)
         tgt_ls_safe = max(tgt_ls, eps)
@@ -1231,9 +1240,8 @@ if not player_row.empty:
 
         out['Similarity'] = similarities
         out['Adjusted Similarity'] = (
-        out['Similarity'] * ((1 - league_weight_sim) + league_weight_sim * league_ratio)
+            out['Similarity'] * ((1 - league_weight_sim) + league_weight_sim * league_ratio)
         ) if apply_league_adjust else out['Similarity']
-
 
         out = out.sort_values('Adjusted Similarity', ascending=False).reset_index(drop=True)
         out.insert(0, 'Rank', np.arange(1, len(out) + 1))
