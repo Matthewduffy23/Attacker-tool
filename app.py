@@ -278,7 +278,9 @@ def compute_weighted_role_score(df_in: pd.DataFrame, metrics: dict, beta: float,
     return player_score
 
 for role_name, role_def in ROLES.items():
-    df_f[f"{role_name} Score"] = compute_weighted_role_score(df_f, role_def["metrics"], beta=beta, league_weighting=use_league_weighting)
+    df_f[f"{role_name} Score"] = compute_weighted_role_score(
+        df_f, role_def["metrics"], beta=beta, league_weighting=use_league_weighting
+    )
 
 # ----------------- THRESHOLDS -----------------
 if enable_min_perf and sel_metrics:
@@ -381,7 +383,7 @@ def clean_attacker_label(s: str) -> str:
     s = s.replace("Progressive passes per 90", "Progressive Passes")
     s = s.replace("Progressive runs per 90", "Progressive runs")
     s = s.replace("Smart passes per 90", "Smart Passes")
-    s = s.replace("Passes to penalty area per 90", "Passes to Pen area")
+    s = s.replace("Passes to penalty area per 90", "Passes to Penalty Area")
     s = s.replace("Accurate passes, %", "Pass %")
     return s
 
@@ -483,7 +485,7 @@ else:
         'xG per 90': {'style':'Gets into good goal scoring positions','sw':'Attacking Positioning'},
         'Shots per 90': {'style':'Takes many shots','sw':'Shot Volume'},
         'Goal conversion, %': {'style':None,'sw':'Finishing'},
-        'Crosses per 90': {'style':'Wide crearor','sw':'Crossing'},
+        'Crosses per 90': {'style':'Wide creator','sw':'Crossing'},
         'Dribbles per 90': {'style':'Dribbler','sw':'Dribble Volume'},
         'Successful dribbles, %': {'style':None,'sw':'Dribbling Efficiency'},
         'Touches in box per 90': {'style':'Busy in the penalty box','sw':'Penalty-box Coverage'},
@@ -497,7 +499,8 @@ else:
         'Smart passes per 90': {'style':'Attempts through balls','sw': None},
     }
     HI, LO, STYLE_T = 70, 30, 65
-        def percentile_in_series(value, series: pd.Series) -> float:
+
+    def percentile_in_series(value, series: pd.Series) -> float:
         s = pd.to_numeric(series, errors="coerce").dropna()
         if len(s) == 0 or pd.isna(value):
             return np.nan
@@ -892,7 +895,6 @@ if radar_metrics:
             axis_max = pool[radar_metrics].max().values
             pad = (axis_max - axis_min) * 0.07
             axis_min = axis_min - pad; axis_max = axis_max + pad
-            ring_radii = np.linspace(10, 100, 11)
             axis_ticks = [np.linspace(axis_min[i], axis_max[i], 11) for i in range(len(labels))]
 
             if sort_by_gap:
@@ -917,42 +919,98 @@ if radar_metrics:
                 Ar = np.concatenate([A_r, A_r[:1]]); Br = np.concatenate([B_r, B_r[:1]])
                 fig = plt.figure(figsize=(13.2, 8.0), dpi=260); fig.patch.set_facecolor(PAGE_BG)
                 ax = plt.subplot(111, polar=True); ax.set_facecolor(AX_BG)
-                ax.set_theta_offset(np.pi/2); ax.set_theta_direction(-1)
-                ax.set_xticks(theta); ax.set_xticklabels(labels, fontsize=AXIS_FS, color=LABEL_COLOR, fontweight=600)
-                ax.set_yticks([]); ax.grid(False); [s.set_visible(False) for s in ax.spines.values()]
+                                ax.set_theta_offset(np.pi / 2)
+                ax.set_theta_direction(-1)
+
+                # Axis labels
+                ax.set_xticks(theta)
+                ax.set_xticklabels(labels, fontsize=AXIS_FS, color=LABEL_COLOR, fontweight=600)
+
+                # No radial tick lines or default grid
+                ax.set_yticks([])
+                ax.grid(False)
+                for s in ax.spines.values():
+                    s.set_visible(False)
+
+                # Alternating background bands
+                ring_edges = np.linspace(INNER_HOLE, 100, 11)
                 for i in range(10):
-                    r0, r1 = np.linspace(INNER_HOLE,100,11)[i], np.linspace(INNER_HOLE,100,11)[i+1]
+                    r0, r1 = ring_edges[i], ring_edges[i + 1]
                     band = GRID_BAND_A if i % 2 == 0 else GRID_BAND_B
-                    ax.add_artist(Wedge((0,0), r1, 0, 360, width=(r1-r0),
-                                        transform=ax.transData._b, facecolor=band, edgecolor="none", zorder=0.8))
-                ring_t = np.linspace(0, 2*np.pi, 361)
-                for r in np.linspace(INNER_HOLE,100,11):
+                    ax.add_artist(
+                        Wedge(
+                            (0, 0), r1, 0, 360,
+                            width=(r1 - r0),
+                            transform=ax.transData._b,
+                            facecolor=band,
+                            edgecolor="none",
+                            zorder=0.8
+                        )
+                    )
+
+                # Concentric rings
+                ring_t = np.linspace(0, 2 * np.pi, 361)
+                for r in ring_edges:
                     ax.plot(ring_t, np.full_like(ring_t, r), color=RING_COLOR, lw=RING_LW, zorder=0.9)
+
+                # Per-axis numeric tick labels (skip inner 2 rings near hole for clarity)
                 start_idx = 2
                 for i, ang in enumerate(theta):
                     vals = ticks[i][start_idx:]
-                    for rr, v in zip(np.linspace(INNER_HOLE,100,11)[start_idx:], vals):
-                        ax.text(ang, rr-1.8, f"{v:.1f}", ha="center", va="center",
-                                fontsize=TICK_FS, color=TICK_COLOR, zorder=1.1)
-                ax.add_artist(Circle((0,0), radius=INNER_HOLE-0.6, transform=ax.transData._b,
-                                     color=PAGE_BG, zorder=1.2, ec="none"))
+                    for rr, v in zip(ring_edges[start_idx:], vals):
+                        ax.text(
+                            ang, rr - 1.8, f"{v:.1f}",
+                            ha="center", va="center",
+                            fontsize=TICK_FS, color=TICK_COLOR, zorder=1.1
+                        )
+
+                # Inner hole to improve readability
+                ax.add_artist(
+                    Circle(
+                        (0, 0), radius=INNER_HOLE - 0.6,
+                        transform=ax.transData._b,
+                        color=PAGE_BG, zorder=1.2, ec="none"
+                    )
+                )
+
+                # Optional pool-average
                 if show_avg and AVG_r is not None:
                     Avg = np.concatenate([AVG_r, AVG_r[:1]])
                     ax.plot(theta_closed, Avg, lw=1.5, color="#94A3B8", ls="--", alpha=0.9, zorder=2.2)
-                ax.plot(theta_closed, Ar, color=COL_A, lw=2.2, zorder=3); ax.fill(theta_closed, Ar, color=FILL_A, zorder=2.5)
-                ax.plot(theta_closed, Br, color=COL_B, lw=2.2, zorder=3); ax.fill(theta_closed, Br, color=FILL_B, zorder=2.5)
+
+                # Players A & B
+                ax.plot(theta_closed, Ar, color=COL_A, lw=2.2, zorder=3)
+                ax.fill(theta_closed, Ar, color=FILL_A, zorder=2.5)
+                ax.plot(theta_closed, Br, color=COL_B, lw=2.2, zorder=3)
+                ax.fill(theta_closed, Br, color=FILL_B, zorder=2.5)
+
                 ax.set_rlim(0, 105)
-                minsA = f"{int(pd.to_numeric(rowA.get('Minutes played',0))):,} mins" if pd.notna(rowA.get('Minutes played')) else "Minutes: N/A"
-                minsB = f"{int(pd.to_numeric(rowB.get('Minutes played',0))):,} mins" if pd.notna(rowB.get('Minutes played')) else "Minutes: N/A"
-                fig.text(0.12, 0.96,  f"{pA}", color=COL_A, fontsize=TITLE_FS, fontweight="bold", ha="left")
+
+                # Header text blocks
+                minsA = (
+                    f"{int(pd.to_numeric(rowA.get('Minutes played', 0))):,} mins"
+                    if pd.notna(rowA.get('Minutes played')) else "Minutes: N/A"
+                )
+                minsB = (
+                    f"{int(pd.to_numeric(rowB.get('Minutes played', 0))):,} mins"
+                    if pd.notna(rowB.get('Minutes played')) else "Minutes: N/A"
+                )
+
+                fig.text(0.12, 0.96,  f"{headerA}", color=COL_A, fontsize=TITLE_FS, fontweight="bold", ha="left")
                 fig.text(0.12, 0.935, f"{rowA['Team']} — {rowA['League']}", color=COL_A, fontsize=SUB_FS, ha="left")
                 fig.text(0.12, 0.915, minsA, color="#374151", fontsize=10, ha="left")
-                fig.text(0.88, 0.96,  f"{pB}", color=COL_B, fontsize=TITLE_FS, fontweight="bold", ha="right")
+
+                fig.text(0.88, 0.96,  f"{headerB}", color=COL_B, fontsize=TITLE_FS, fontweight="bold", ha="right")
                 fig.text(0.88, 0.935, f"{rowB['Team']} — {rowB['League']}", color=COL_B, fontsize=SUB_FS, ha="right")
                 fig.text(0.88, 0.915, minsB, color="#374151", fontsize=10, ha="right")
+
                 return fig
 
-            figr = draw_radar(labels, A_r, B_r, axis_ticks, pA, "", "", pB, "", "", show_avg=show_avg, AVG_r=AVG_r)
+            figr = draw_radar(
+                labels, A_r, B_r, axis_ticks,
+                pA, "", "", pB, "", "",
+                show_avg=show_avg, AVG_r=AVG_r
+            )
             st.pyplot(figr, use_container_width=True)
         else:
             st.info("No players remain in radar pool after filters.")
@@ -1149,9 +1207,6 @@ else:
                 st.dataframe(out.head(int(top_n_sim)), use_container_width=True)
     except Exception as e:
         st.info(f"Similarity block error: {e}")
-
-
-
 
 # ---------------------------- (D) CLUB FIT — self-contained block ----------------------------
 st.markdown("---")
@@ -1394,6 +1449,8 @@ else:
                             "strength_range": (int(min_strength_cf), int(max_strength_cf)),
                             "n_teams": int(results_cf.shape[0]),
                         })
+
+
 
 
 
