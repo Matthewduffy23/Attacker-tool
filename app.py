@@ -1165,6 +1165,12 @@ with st.expander("Similarity settings", expanded=False):
 
     top_n_sim = st.number_input("Show top N", min_value=5, max_value=200, value=50, step=5, key="sim_top")
 
+# ---- SAFETY GUARD: ensure sim_leagues exists (prevents NameError on first load) ----
+try:
+    sim_leagues  # noqa: F401
+except NameError:
+    sim_leagues = _included_leagues_cf[:]  # fallback to all listed leagues
+
 # --- Similarity computation ---
 if not player_row.empty:
     target_row_full = df[df['Player'] == player_name].head(1).iloc[0]
@@ -1188,6 +1194,8 @@ if not player_row.empty:
     # -----------------------------------
 
     # base filters
+    df_candidates['Minutes played'] = pd.to_numeric(df_candidates['Minutes played'], errors='coerce')
+    df_candidates['Age'] = pd.to_numeric(df_candidates['Age'], errors='coerce')
     df_candidates = df_candidates[
         df_candidates['Minutes played'].between(sim_min_minutes, sim_max_minutes) &
         df_candidates['Age'].between(sim_min_age, sim_max_age)
@@ -1198,8 +1206,11 @@ if not player_row.empty:
     if not df_candidates.empty:
         # percentile ranks within candidate pool (per-league for robustness)
         percl = df_candidates.groupby('League')[SIM_FEATURES].rank(pct=True)
-        # target percentiles computed on df global per-league
-        target_percentiles = df.groupby('League')[SIM_FEATURES].rank(pct=True).loc[df['Player'] == player_name]
+
+        # target percentiles computed on full df (per-league); collapse duplicates safely
+        all_pct = df.groupby('League')[SIM_FEATURES].rank(pct=True)
+        target_pct_df = all_pct.loc[df['Player'] == player_name, SIM_FEATURES]
+        target_percentiles = target_pct_df.mean(axis=0).values.reshape(1, -1)
 
         # standardize on candidate pool
         scaler = StandardScaler()
@@ -1209,7 +1220,7 @@ if not player_row.empty:
         # feature weights vector (from sliders)
         weights_vec = np.array([float(adv_weights.get(f, 1)) for f in SIM_FEATURES], dtype=float)
 
-        percentile_distances = np.linalg.norm((percl.values - target_percentiles.values) * weights_vec, axis=1)
+        percentile_distances = np.linalg.norm((percl.values - target_percentiles) * weights_vec, axis=1)
         actual_value_distances = np.linalg.norm((standardized_features - target_features_standardized) * weights_vec, axis=1)
         combined = percentile_distances * percentile_weight + actual_value_distances * (1.0 - percentile_weight)
 
