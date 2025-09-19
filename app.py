@@ -1084,21 +1084,21 @@ DEFAULT_SIM_WEIGHTS.update({
     'Aerial duels won, %': 2,
 })
 
-# --- Build local presets safely (no reliance on _PRESETS_CF existing) ---
+# --- Build local presets safely ---
 _leagues_from_df = df['League'].dropna().unique().tolist() if 'League' in df.columns else []
 _included_from_global = list(globals().get('INCLUDED_LEAGUES', []))
 _included_leagues_cf = sorted(set(_included_from_global) | set(_leagues_from_df))
 
-_PRESET_LEAGUES_SAFE = globals().get('PRESET_LEAGUES', {})  # may be missing; that's ok
+_PRESET_LEAGUES_SAFE = globals().get('PRESET_LEAGUES', {})
 _PRESETS_SIM = {
     "All listed leagues": _included_leagues_cf,
-    "T5": sorted(list(_PRESET_LEAGUES_SAFE.get("Top 5 Europe", []))),
+    "T5":  sorted(list(_PRESET_LEAGUES_SAFE.get("Top 5 Europe", []))),
     "T20": sorted(list(_PRESET_LEAGUES_SAFE.get("Top 20 Europe", []))),
     "EFL": sorted(list(_PRESET_LEAGUES_SAFE.get("EFL (England 2–4)", []))),
     "Custom": None,
 }
-# ------------------------------------------------------------------------
 
+# ------------------------------------------------------------------------
 with st.expander("Similarity settings", expanded=False):
     candidate_league_options = _included_leagues_cf
     default_sel = leagues_sel if 'leagues_sel' in globals() else _included_leagues_cf
@@ -1137,7 +1137,7 @@ with st.expander("Similarity settings", expanded=False):
     sim_min_minutes, sim_max_minutes = st.slider("Minutes played (candidates)", 0, 5000, (1000, 5000), key="sim_min")
     sim_min_age, sim_max_age = st.slider("Age (candidates)", 14, 45, (16, 40), key="sim_age")
 
-    # Optional league quality filter (0–101), applied pre-computation
+    # Optional league quality filter (0–101)
     use_strength_filter = st.toggle("Filter by league quality (0–101)", value=False, key="sim_use_strength")
     if use_strength_filter:
         sim_min_strength, sim_max_strength = st.slider("League quality (strength)", 0, 101, (0, 101), key="sim_strength")
@@ -1145,7 +1145,7 @@ with st.expander("Similarity settings", expanded=False):
     # Blend between percentile distance and actual-value distance
     percentile_weight = st.slider("Percentile weight", 0.0, 1.0, 0.7, 0.05, key="sim_pw")
 
-    # Toggleable league difficulty adjustment (default on)
+    # League difficulty adjustment
     apply_league_adjust = st.toggle("Apply league difficulty adjustment", value=True, key="sim_apply_ladj")
     league_weight_sim = st.slider(
         "League weight (difficulty adj.)",
@@ -1154,7 +1154,7 @@ with st.expander("Similarity settings", expanded=False):
         disabled=not apply_league_adjust
     )
 
-    # Always-available advanced weights (no toggle)
+    # Advanced feature weights
     with st.expander("Advanced feature weights (1–5)", expanded=False):
         adv_weights = {}
         for f in SIM_FEATURES:
@@ -1167,12 +1167,14 @@ with st.expander("Similarity settings", expanded=False):
 # --- Similarity computation ---
 # Safety: ensure sim_leagues is always defined
 if "sim_leagues" not in st.session_state or not st.session_state["sim_leagues"]:
-    if "_included_leagues_cf" in globals():
-        st.session_state["sim_leagues"] = list(_included_leagues_cf)
+    if "INCLUDED_LEAGUES" in globals():
+        fallback_leagues = list(globals()["INCLUDED_LEAGUES"])
     elif "League" in df.columns:
-        st.session_state["sim_leagues"] = sorted(df["League"].dropna().unique().tolist())
+        fallback_leagues = sorted(df["League"].dropna().unique().tolist())
     else:
-        st.session_state["sim_leagues"] = []
+        fallback_leagues = []
+    st.session_state["sim_leagues"] = fallback_leagues
+
 sim_leagues = st.session_state["sim_leagues"]
 
 if not player_row.empty:
