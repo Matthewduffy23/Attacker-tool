@@ -71,6 +71,27 @@ PRESET_LEAGUES = {
     "EFL (England 2–4)": {'England 2.','England 3.','England 4.'}
 }
 
+# ✅ define a global safe included leagues list for later blocks
+_leagues_from_df = []
+try:
+    df_tmp = pd.read_csv(Path(__file__).with_name("WORLDJUNE25.csv"))
+    _leagues_from_df = df_tmp['League'].dropna().unique().tolist() if 'League' in df_tmp.columns else []
+except Exception:
+    pass
+
+_included_leagues_cf = sorted(set(INCLUDED_LEAGUES) | set(_leagues_from_df))
+
+# presets for later blocks (Similarity / Club Fit)
+_PRESETS_SAFE = {
+    "All listed leagues": _included_leagues_cf,
+    "Top 5 Europe": sorted(list(PRESET_LEAGUES.get("Top 5 Europe", []))),
+    "Top 20 Europe": sorted(list(PRESET_LEAGUES.get("Top 20 Europe", []))),
+    "EFL (England 2–4)": sorted(list(PRESET_LEAGUES.get("EFL (England 2–4)", []))),
+    "Custom": None,
+}
+
+# (… everything else in your script stays the same …)
+
 FEATURES = [
     'Successful defensive actions per 90', 'Defensive duels per 90', 'Aerial duels won, %',
     'Non-penalty goals per 90', 'xG per 90', 'Shots per 90', 'Shots on target, %', 
