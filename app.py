@@ -994,8 +994,24 @@ _PRESETS_SIM = {
 }
 
 with st.expander("Similarity settings", expanded=False):
-    candidate_league_options = _included_leagues_cf
-    default_sel = leagues_sel if 'leagues_sel' in globals() else _included_leagues_cf
+    # Build options robustly (no external vars required)
+    candidate_league_options = sorted(
+        set(df.get("League", pd.Series([], dtype="object")).dropna().unique().tolist()) |
+        set(INCLUDED_LEAGUES)
+    )
+
+    # Seed session default only once (no NameError)
+    if "sim_leagues" not in st.session_state or not st.session_state["sim_leagues"]:
+        st.session_state["sim_leagues"] = candidate_league_options.copy()
+
+    # Presets
+    _PRESETS_SIM = {
+        "All listed leagues": candidate_league_options,
+        "T5":  sorted(list(PRESET_LEAGUES.get("Top 5 Europe", []))),
+        "T20": sorted(list(PRESET_LEAGUES.get("Top 20 Europe", []))),
+        "EFL": sorted(list(PRESET_LEAGUES.get("EFL (England 2–4)", []))),
+        "Custom": None,
+    }
 
     sim_preset_choices = list(_PRESETS_SIM.keys())
     sim_preset = st.selectbox(
@@ -1005,14 +1021,15 @@ with st.expander("Similarity settings", expanded=False):
         key="sim_preset"
     )
 
+    # Decide defaults without touching undefined names
     if sim_preset != "Custom":
         preset_vals = _PRESETS_SIM.get(sim_preset) or []
-        preset_vals = sorted([lg for lg in preset_vals if lg in candidate_league_options])
+        preset_vals = [lg for lg in preset_vals if lg in candidate_league_options]
         sim_leagues = st.multiselect(
             "Candidate leagues",
             candidate_league_options,
-            default=(preset_vals if preset_vals else default_sel),
-            key="sim_leagues",
+            default=(preset_vals if preset_vals else st.session_state["sim_leagues"]),
+            key="sim_leagues_picker",
             disabled=bool(preset_vals)
         )
         if preset_vals:
@@ -1023,10 +1040,14 @@ with st.expander("Similarity settings", expanded=False):
         sim_leagues = st.multiselect(
             "Candidate leagues",
             candidate_league_options,
-            default=default_sel,
-            key="sim_leagues",
+            default=st.session_state["sim_leagues"],
+            key="sim_leagues_picker_custom",
         )
 
+    # Persist back the latest choice
+    st.session_state["sim_leagues"] = sim_leagues
+
+    # Base filters
     sim_min_minutes, sim_max_minutes = st.slider("Minutes played (candidates)", 0, 5000, (1000, 5000), key="sim_min")
     sim_min_age, sim_max_age = st.slider("Age (candidates)", 14, 45, (16, 40), key="sim_age")
 
@@ -1053,72 +1074,6 @@ with st.expander("Similarity settings", expanded=False):
 
     top_n_sim = st.number_input("Show top N", min_value=5, max_value=200, value=50, step=5, key="sim_top")
 
-if not player_row.empty:
-    target_row_full = df[df['Player'] == player_name].head(1).iloc[0]
-    target_league = target_row_full['League']
-
-    df_candidates = df[df['League'].isin(sim_leagues)].copy()
-
-    if use_strength_filter and LS_MAP:
-        df_candidates['League strength'] = df_candidates['League'].map(LS_MAP).fillna(0.0)
-        df_candidates = df_candidates[
-            (df_candidates['League strength'] >= float(sim_min_strength)) &
-            (df_candidates['League strength'] <= float(sim_max_strength))
-        ]
-
-    if 'Position' in df_candidates.columns:
-        df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
-    else:
-        st.warning("No 'Position' column found; cannot filter to attackers.")
-
-    df_candidates = df_candidates[
-        df_candidates['Minutes played'].between(sim_min_minutes, sim_max_minutes) &
-        df_candidates['Age'].between(sim_min_age, sim_max_age)
-    ]
-    df_candidates = df_candidates.dropna(subset=SIM_FEATURES)
-    df_candidates = df_candidates[df_candidates['Player'] != player_name]
-
-    if not df_candidates.empty:
-        percl = df_candidates.groupby('League')[SIM_FEATURES].rank(pct=True)
-        target_percentiles = df.groupby('League')[SIM_FEATURES].rank(pct=True).loc[df['Player'] == player_name]
-
-        scaler = StandardScaler()
-        standardized_features = scaler.fit_transform(df_candidates[SIM_FEATURES])
-        target_features_standardized = scaler.transform([target_row_full[SIM_FEATURES].values])
-
-        weights_vec = np.array([float(adv_weights.get(f, 1)) for f in SIM_FEATURES], dtype=float)
-
-        percentile_distances = np.linalg.norm((percl.values - target_percentiles.values) * weights_vec, axis=1)
-        actual_value_distances = np.linalg.norm((standardized_features - target_features_standardized) * weights_vec, axis=1)
-        combined = percentile_distances * percentile_weight + actual_value_distances * (1.0 - percentile_weight)
-
-        arr = np.asarray(combined, dtype=float).ravel()
-        rng = np.ptp(arr)
-        norm = (arr - arr.min()) / (rng if rng != 0 else 1.0)
-        similarities = ((1.0 - norm) * 100.0).round(2)
-
-        out = df_candidates[['Player','Team','League','Age','Minutes played','Market value']].copy()
-        out['League strength'] = out['League'].map(LS_MAP).fillna(0.0) if LS_MAP else 0.0
-        tgt_ls = float(LS_MAP.get(target_league, 1.0)) if LS_MAP else 1.0
-
-        eps = 1e-6
-        cand_ls = np.maximum(out['League strength'].astype(float), eps)
-        tgt_ls_safe = max(tgt_ls, eps)
-        league_ratio = np.minimum(cand_ls / tgt_ls_safe, tgt_ls_safe / cand_ls)
-
-        out['Similarity'] = similarities
-        out['Adjusted Similarity'] = (
-            out['Similarity'] * ((1 - league_weight_sim) + league_weight_sim * league_ratio)
-        ) if apply_league_adjust else out['Similarity']
-
-        out = out.sort_values('Adjusted Similarity', ascending=False).reset_index(drop=True)
-        out.insert(0, 'Rank', np.arange(1, len(out) + 1))
-        st.caption(f"Candidates after filters: {len(out):,}")
-        st.dataframe(out.head(int(top_n_sim)), use_container_width=True)
-    else:
-        st.info("No candidates after similarity filters.")
-else:
-    st.caption("Pick a player to see similar players.")
 
 # ---------------------------- (D) CLUB FIT — self-contained block ----------------------------
 st.markdown("---")
