@@ -1052,7 +1052,7 @@ st.header("🧭 Similar players (within adjustable pool)")
 
 # --- Feature basket declared FIRST so UI can use it ---
 SIM_FEATURES = [
-    'Defensive duels per 90',
+     'Defensive duels per 90',
     'Aerial duels per 90', 'Aerial duels won, %',
     'PAdj Interceptions', 'xG per 90', 'Non-penalty goals per 90', 'Shots per 90',
     'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
@@ -1092,7 +1092,7 @@ _included_leagues_cf = sorted(set(_included_from_global) | set(_leagues_from_df)
 _PRESET_LEAGUES_SAFE = globals().get('PRESET_LEAGUES', {})  # may be missing; that's ok
 _PRESETS_SIM = {
     "All listed leagues": _included_leagues_cf,
-    "T5": sorted(list(_PRESET_LEAGUES_SAFE.get("Top 5 Europe", []))),
+    "T5":  sorted(list(_PRESET_LEAGUES_SAFE.get("Top 5 Europe", []))),
     "T20": sorted(list(_PRESET_LEAGUES_SAFE.get("Top 20 Europe", []))),
     "EFL": sorted(list(_PRESET_LEAGUES_SAFE.get("EFL (England 2–4)", []))),
     "Custom": None,
@@ -1165,12 +1165,6 @@ with st.expander("Similarity settings", expanded=False):
 
     top_n_sim = st.number_input("Show top N", min_value=5, max_value=200, value=50, step=5, key="sim_top")
 
-# ---- SAFETY GUARD: ensure sim_leagues exists (prevents NameError on first load) ----
-try:
-    sim_leagues  # noqa: F401
-except NameError:
-    sim_leagues = _included_leagues_cf[:]  # fallback to all listed leagues
-
 # --- Similarity computation ---
 if not player_row.empty:
     target_row_full = df[df['Player'] == player_name].head(1).iloc[0]
@@ -1186,16 +1180,14 @@ if not player_row.empty:
             (df_candidates['League strength'] <= float(sim_max_strength))
         ]
 
-    # --- attacker filter (replaces CF-only) ---
+    # --- enforce CF-only (no toggle) ---
     if 'Position' in df_candidates.columns:
-        df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
+        df_candidates = df_candidates[df_candidates['Position'].astype(str).str.startswith('CF')]
     else:
-        st.warning("No 'Position' column found; cannot filter to attackers.")
+        st.warning("No 'Position' column found; cannot filter to CF.")
     # -----------------------------------
 
     # base filters
-    df_candidates['Minutes played'] = pd.to_numeric(df_candidates['Minutes played'], errors='coerce')
-    df_candidates['Age'] = pd.to_numeric(df_candidates['Age'], errors='coerce')
     df_candidates = df_candidates[
         df_candidates['Minutes played'].between(sim_min_minutes, sim_max_minutes) &
         df_candidates['Age'].between(sim_min_age, sim_max_age)
@@ -1206,11 +1198,8 @@ if not player_row.empty:
     if not df_candidates.empty:
         # percentile ranks within candidate pool (per-league for robustness)
         percl = df_candidates.groupby('League')[SIM_FEATURES].rank(pct=True)
-
-        # target percentiles computed on full df (per-league); collapse duplicates safely
-        all_pct = df.groupby('League')[SIM_FEATURES].rank(pct=True)
-        target_pct_df = all_pct.loc[df['Player'] == player_name, SIM_FEATURES]
-        target_percentiles = target_pct_df.mean(axis=0).values.reshape(1, -1)
+        # target percentiles computed on df global per-league
+        target_percentiles = df.groupby('League')[SIM_FEATURES].rank(pct=True).loc[df['Player'] == player_name]
 
         # standardize on candidate pool
         scaler = StandardScaler()
@@ -1220,7 +1209,7 @@ if not player_row.empty:
         # feature weights vector (from sliders)
         weights_vec = np.array([float(adv_weights.get(f, 1)) for f in SIM_FEATURES], dtype=float)
 
-        percentile_distances = np.linalg.norm((percl.values - target_percentiles) * weights_vec, axis=1)
+        percentile_distances = np.linalg.norm((percl.values - target_percentiles.values) * weights_vec, axis=1)
         actual_value_distances = np.linalg.norm((standardized_features - target_features_standardized) * weights_vec, axis=1)
         combined = percentile_distances * percentile_weight + actual_value_distances * (1.0 - percentile_weight)
 
@@ -1242,8 +1231,9 @@ if not player_row.empty:
 
         out['Similarity'] = similarities
         out['Adjusted Similarity'] = (
-            out['Similarity'] * ((1 - league_weight_sim) + league_weight_sim * league_ratio)
+        out['Similarity'] * ((1 - league_weight_sim) + league_weight_sim * league_ratio)
         ) if apply_league_adjust else out['Similarity']
+
 
         out = out.sort_values('Adjusted Similarity', ascending=False).reset_index(drop=True)
         out.insert(0, 'Rank', np.arange(1, len(out) + 1))
@@ -1253,7 +1243,6 @@ if not player_row.empty:
         st.info("No candidates after similarity filters.")
 else:
     st.caption("Pick a player to see similar players.")
-
 
 # ---------------------------- (D) CLUB FIT — self-contained block ----------------------------
 st.markdown("---")
