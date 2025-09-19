@@ -1166,12 +1166,6 @@ with st.expander("Similarity settings", expanded=False):
     top_n_sim = st.number_input("Show top N", min_value=5, max_value=200, value=50, step=5, key="sim_top")
 
 # --- Similarity computation ---
-# Ensure sim_leagues always exists
-if "sim_leagues" not in st.session_state or not st.session_state["sim_leagues"]:
-    st.session_state["sim_leagues"] = _included_leagues_cf[:]
-
-sim_leagues = st.session_state["sim_leagues"]
-
 if not player_row.empty:
     target_row_full = df[df['Player'] == player_name].head(1).iloc[0]
     target_league = target_row_full['League']
@@ -1191,6 +1185,7 @@ if not player_row.empty:
         df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
     else:
         st.warning("No 'Position' column found; cannot filter to attackers.")
+    # -----------------------------------
 
     # base filters
     df_candidates = df_candidates[
@@ -1247,6 +1242,7 @@ if not player_row.empty:
         st.info("No candidates after similarity filters.")
 else:
     st.caption("Pick a player to see similar players.")
+
 
 # ---------------------------- (D) CLUB FIT — self-contained block ----------------------------
 st.markdown("---")
