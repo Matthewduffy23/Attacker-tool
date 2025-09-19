@@ -963,7 +963,7 @@ if radar_metrics:
 st.markdown("---")
 st.header("🧭 Similar players (within adjustable pool)")
 
-# --- Feature basket (kept local so it can't be "missing") ---
+# --- Feature basket (local) ---
 SIM_FEATURES = [
     'Defensive duels per 90','Aerial duels per 90','Aerial duels won, %','PAdj Interceptions',
     'xG per 90','Non-penalty goals per 90','Shots per 90','Crosses per 90','Accurate crosses, %',
@@ -974,191 +974,182 @@ SIM_FEATURES = [
     'Progressive passes per 90'
 ]
 
-# League strength map (use your global if present, else empty dict)
-LS_MAP = dict(globals().get("LEAGUE_STRENGTHS", {}))
+# League strength (from global, if present)
+_LEAGUE_STRENGTH_MAP = dict(globals().get("LEAGUE_STRENGTHS", {}))
+
+# Build candidate league universe safely (CSV + hardcoded)
+_candidate_league_universe = sorted(
+    set(df.get("League", pd.Series([], dtype="object")).dropna().unique().tolist()) |
+    set(globals().get("INCLUDED_LEAGUES", []))
+)
+
+# Seed session ONCE (no hidden names)
+if "sim_leagues" not in st.session_state or not st.session_state["sim_leagues"]:
+    st.session_state["sim_leagues"] = _candidate_league_universe.copy()
 
 with st.expander("Similarity settings", expanded=False):
-    # Build candidate league list from CSV + hardcoded set
-    candidate_league_options = sorted(
-        set(df.get("League", pd.Series([], dtype="object")).dropna().unique().tolist()) |
-        set(INCLUDED_LEAGUES)
-    )
-
-    # Seed session only once
-    if "sim_leagues" not in st.session_state or not st.session_state["sim_leagues"]:
-        st.session_state["sim_leagues"] = candidate_league_options.copy()
-
-    # Presets
+    # Presets (derive from your PRESET_LEAGUES if defined)
     _PRESETS_SIM = {
-        "All listed leagues": candidate_league_options,
-        "T5":  sorted(list(PRESET_LEAGUES.get("Top 5 Europe", []))),
-        "T20": sorted(list(PRESET_LEAGUES.get("Top 20 Europe", []))),
-        "EFL": sorted(list(PRESET_LEAGUES.get("EFL (England 2–4)", []))),
+        "All listed leagues": _candidate_league_universe,
+        "Top 5 Europe":  sorted(list(globals().get("PRESET_LEAGUES", {}).get("Top 5 Europe", []))),
+        "Top 20 Europe": sorted(list(globals().get("PRESET_LEAGUES", {}).get("Top 20 Europe", []))),
+        "EFL (England 2–4)": sorted(list(globals().get("PRESET_LEAGUES", {}).get("EFL (England 2–4)", []))),
         "Custom": None,
     }
-    sim_preset_choices = list(_PRESETS_SIM.keys())
-    sim_preset = st.selectbox(
+
+    preset_choice = st.selectbox(
         "Candidate league preset",
-        sim_preset_choices,
-        index=sim_preset_choices.index("All listed leagues"),
-        key="sim_preset"
+        list(_PRESETS_SIM.keys()),
+        index=0,
+        key="sim_preset_choice"
     )
 
-    if sim_preset != "Custom":
-        preset_vals = _PRESETS_SIM.get(sim_preset) or []
-        preset_vals = [lg for lg in preset_vals if lg in candidate_league_options]
+    if preset_choice != "Custom":
+        preset_vals = [lg for lg in (_PRESETS_SIM.get(preset_choice) or []) if lg in _candidate_league_universe]
         sim_leagues = st.multiselect(
             "Candidate leagues",
-            candidate_league_options,
+            _candidate_league_universe,
             default=(preset_vals if preset_vals else st.session_state["sim_leagues"]),
             key="sim_leagues_picker",
             disabled=bool(preset_vals)
         )
         if preset_vals:
-            st.caption(f"Preset: {sim_preset} — {len(preset_vals)} league(s)")
+            st.caption(f"Preset **{preset_choice}** applied ({len(preset_vals)} leagues).")
         else:
-            st.warning("This preset has no leagues configured. Edit manually or define PRESET_LEAGUES.")
+            st.warning("Preset empty — edit manually.")
     else:
         sim_leagues = st.multiselect(
             "Candidate leagues",
-            candidate_league_options,
+            _candidate_league_universe,
             default=st.session_state["sim_leagues"],
             key="sim_leagues_picker_custom",
         )
 
-    # Persist latest choice for next rerun
+    # Persist latest selection
     st.session_state["sim_leagues"] = sim_leagues
 
     # Base filters
-    sim_min_minutes, sim_max_minutes = st.slider("Minutes played (candidates)", 0, 5000, (1000, 5000), key="sim_min")
-    sim_min_age, sim_max_age = st.slider("Age (candidates)", 14, 45, (16, 40), key="sim_age")
+    sim_min_minutes, sim_max_minutes = st.slider("Minutes played (candidates)", 0, 5000, (1000, 5000), key="sim_minutes")
+    sim_min_age, sim_max_age = st.slider("Age (candidates)", 14, 45, (16, 40), key="sim_age_range")
 
-    # Optional league-quality filter
+    # Optional league-strength filter
     use_strength_filter = st.toggle("Filter by league quality (0–101)", value=False, key="sim_use_strength")
     if use_strength_filter:
-        sim_min_strength, sim_max_strength = st.slider("League quality (strength)", 0, 101, (0, 101), key="sim_strength")
+        sim_min_strength, sim_max_strength = st.slider("League quality (strength)", 0, 101, (0, 101), key="sim_strength_range")
 
-    # Blend & difficulty adjustment
-    percentile_weight = st.slider("Percentile weight", 0.0, 1.0, 0.7, 0.05, key="sim_pw")
+    # Blending & adjustment
+    percentile_weight = st.slider("Percentile weight", 0.0, 1.0, 0.7, 0.05, key="sim_pct_w")
     apply_league_adjust = st.toggle("Apply league difficulty adjustment", value=True, key="sim_apply_ladj")
-    league_weight_sim = st.slider(
-        "League weight (difficulty adj.)", 0.0, 1.0, 0.2, 0.05, key="sim_lw", disabled=not apply_league_adjust
-    )
+    league_weight_sim   = st.slider("League weight (difficulty adj.)", 0.0, 1.0, 0.2, 0.05, key="sim_league_w", disabled=not apply_league_adjust)
 
-    # Advanced feature weights
+    # Feature weights UI
     with st.expander("Advanced feature weights (1–5)", expanded=False):
         adv_weights = {}
         for f in SIM_FEATURES:
-            k = "simw_" + f.replace(" ", "_").replace("%", "pct").replace(",", "").replace(".", "_")
-            default_val = int(st.session_state.get(k, 1))
-            adv_weights[f] = st.slider(f"Weight — {f}", 1, 5, default_val, key=k)
+            k = "simw_" + re.sub(r"[^A-Za-z0-9_]+", "_", f)
+            adv_weights[f] = int(st.session_state.get(k, 1))
+            adv_weights[f] = st.slider(f"Weight — {f}", 1, 5, adv_weights[f], key=k)
 
-    top_n_sim = st.number_input("Show top N", min_value=5, max_value=200, value=50, step=5, key="sim_top")
+    top_n_sim = st.number_input("Show top N", min_value=5, max_value=200, value=50, step=5, key="sim_topn")
 
-# --- Similarity computation ---
-if not player_row.empty:
+# --- Compute similarity ---
+if player_row.empty:
+    st.caption("Pick a player to compute similar players.")
+else:
     try:
-        target_row_full = df.loc[df['Player'] == player_name].iloc[0]
-        target_league = str(target_row_full['League'])
+        # Target row from full df (not filtered table)
+        target_row_full = df.loc[df["Player"] == player_name].iloc[0]
+        target_league   = str(target_row_full.get("League", ""))
 
         # Candidate pool
-        df_candidates = df[df['League'].isin(st.session_state["sim_leagues"])].copy()
-
-        # Position filter (uses your earlier position_filter)
-        if 'Position' in df_candidates.columns:
-            df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
+        cand = df[df["League"].isin(st.session_state["sim_leagues"])].copy()
+        if "Position" in cand.columns:
+            cand = cand[cand["Position"].astype(str).apply(position_filter)]
         else:
-            st.warning("No 'Position' column found; cannot filter to attackers.")
+            st.warning("No 'Position' column; attacker filter skipped.")
 
-        # Base filters
-        df_candidates['Minutes played'] = pd.to_numeric(df_candidates['Minutes played'], errors='coerce')
-        df_candidates['Age'] = pd.to_numeric(df_candidates['Age'], errors='coerce')
-        df_candidates = df_candidates[
-            df_candidates['Minutes played'].between(sim_min_minutes, sim_max_minutes) &
-            df_candidates['Age'].between(sim_min_age, sim_max_age)
-        ]
+        # Base numeric filters
+        cand["Minutes played"] = pd.to_numeric(cand["Minutes played"], errors="coerce")
+        cand["Age"]            = pd.to_numeric(cand["Age"], errors="coerce")
+        cand = cand[cand["Minutes played"].between(sim_min_minutes, sim_max_minutes)]
+        cand = cand[cand["Age"].between(sim_min_age, sim_max_age)]
 
-        # Optional league-strength screen
-        if use_strength_filter and LS_MAP:
-            df_candidates['League strength'] = df_candidates['League'].map(LS_MAP).fillna(0.0)
-            df_candidates = df_candidates[
-                (df_candidates['League strength'] >= float(sim_min_strength)) &
-                (df_candidates['League strength'] <= float(sim_max_strength))
-            ]
+        # Optional league-strength window
+        if use_strength_filter and _LEAGUE_STRENGTH_MAP:
+            cand["League strength"] = cand["League"].map(_LEAGUE_STRENGTH_MAP).fillna(0.0)
+            cand = cand[(cand["League strength"] >= float(sim_min_strength)) &
+                        (cand["League strength"] <= float(sim_max_strength))]
 
-        # Metrics present + numeric
-        for c in SIM_FEATURES:
-            if c not in df_candidates.columns:
-                st.info(f"Metric missing from dataset: {c}")
-        have_all = [c for c in SIM_FEATURES if c in df_candidates.columns]
-        df_candidates = df_candidates.dropna(subset=have_all)
-        for c in have_all:
-            df_candidates[c] = pd.to_numeric(df_candidates[c], errors="coerce")
-        df_candidates = df_candidates.dropna(subset=have_all)
-
-        # Exclude the target player
-        df_candidates = df_candidates[df_candidates['Player'] != player_name]
-
-        if df_candidates.empty:
-            st.info("No candidates after similarity filters.")
+        # Keep available metrics only; coerce numeric & drop NA rows
+        have = [c for c in SIM_FEATURES if c in cand.columns]
+        if not have:
+            st.info("Similarity: none of the SIM_FEATURES exist in this dataset.")
         else:
-            # Percentiles per league (candidate pool)
-            percl = df_candidates.groupby('League')[have_all].rank(pct=True)
+            for c_ in have:
+                cand[c_] = pd.to_numeric(cand[c_], errors="coerce")
+            cand = cand.dropna(subset=have)
 
-            # Target percentiles computed on the WHOLE df per league (robust to small pools)
-            df_all_pct = df.groupby('League')[have_all].rank(pct=True)
-            target_percentiles = df_all_pct.loc[df['Player'] == player_name]
-            if target_percentiles.empty:
-                # fallback: rank within candidate pool's leagues
-                in_leagues = set(df_candidates['League'])
-                df_sub = df[df['League'].isin(in_leagues)]
-                target_percentiles = df_sub.groupby('League')[have_all].rank(pct=True).loc[df_sub['Player'] == player_name]
+            # Exclude target player if present
+            cand = cand[cand["Player"] != player_name]
 
-            # Standardize actual values on candidate pool
-            scaler = StandardScaler()
-            X_cand = scaler.fit_transform(df_candidates[have_all])
-            x_tgt = scaler.transform([target_row_full[have_all].values])
-
-            # Feature weights
-            w = np.array([float(adv_weights.get(f, 1)) for f in have_all], dtype=float)
-
-            # Distances
-            pct_d = np.linalg.norm((percl.values - target_percentiles.values) * w, axis=1)
-            val_d = np.linalg.norm((X_cand - x_tgt) * w, axis=1)
-            combined = pct_d * float(percentile_weight) + val_d * (1.0 - float(percentile_weight))
-
-            # Normalize to 0..100 similarity (higher = more similar)
-            arr = combined.astype(float).ravel()
-            rng = np.ptp(arr)
-            sim = (1.0 - (arr - arr.min()) / (rng if rng != 0 else 1.0)) * 100.0
-
-            out = df_candidates[['Player','Team','League','Age','Minutes played','Market value']].copy()
-            out['Similarity'] = np.round(sim, 2)
-
-            # Optional league difficulty adjustment (symmetric, <=1)
-            if apply_league_adjust and LS_MAP:
-                out['League strength'] = out['League'].map(LS_MAP).fillna(0.0)
-                tgt_ls = float(LS_MAP.get(target_league, 50.0))
-                eps = 1e-6
-                ratio = np.minimum(
-                    np.maximum(out['League strength'].astype(float), eps) / max(tgt_ls, eps),
-                    max(tgt_ls, eps) / np.maximum(out['League strength'].astype(float), eps)
-                )
-                out['Adjusted Similarity'] = out['Similarity'] * (
-                    (1 - float(league_weight_sim)) + float(league_weight_sim) * ratio
-                )
+            if cand.empty:
+                st.info("No candidates after similarity filters.")
             else:
-                out['Adjusted Similarity'] = out['Similarity']
+                # Percentiles per league (candidate pool)
+                cand_pct = cand.groupby("League")[have].rank(pct=True)
 
-            out = out.sort_values('Adjusted Similarity', ascending=False).reset_index(drop=True)
-            out.insert(0, 'Rank', np.arange(1, len(out) + 1))
+                # Target percentiles computed per-league on the WHOLE df (robust)
+                df_all_pct = df.groupby("League")[have].rank(pct=True)
+                target_pct = df_all_pct.loc[df["Player"] == player_name]
+                if target_pct.empty:
+                    # fallback: compute within leagues represented by candidate pool
+                    in_leagues = set(cand["League"])
+                    df_sub = df[df["League"].isin(in_leagues)]
+                    target_pct = df_sub.groupby("League")[have].rank(pct=True).loc[df_sub["Player"] == player_name]
 
-            st.caption(f"Candidates after filters: {len(out):,}")
-            st.dataframe(out.head(int(top_n_sim)), use_container_width=True)
+                # Standardize actual values on candidate pool
+                scaler = StandardScaler()
+                X_cand = scaler.fit_transform(cand[have].values)
+                x_tgt  = scaler.transform([target_row_full[have].astype(float).values])  # shape (1, F)
+
+                # Feature weights vector (aligned to 'have' order)
+                w = np.array([float(adv_weights.get(f, 1)) for f in have], dtype=float)
+
+                # Distances (percentile-space & value-space)
+                pct_d = np.linalg.norm((cand_pct.values - target_pct.values) * w, axis=1)
+                val_d = np.linalg.norm((X_cand - x_tgt) * w, axis=1)
+
+                # Blend and convert to similarity 0..100
+                blend = float(percentile_weight) * pct_d + (1.0 - float(percentile_weight)) * val_d
+                rng = np.ptp(blend)
+                sim = (1.0 - (blend - blend.min()) / (rng if rng != 0 else 1.0)) * 100.0
+
+                out = cand[["Player","Team","League","Age","Minutes played","Market value"]].copy()
+                out["Similarity"] = np.round(sim, 2)
+
+                # Optional difficulty adjustment using league strengths (symmetric)
+                if apply_league_adjust and _LEAGUE_STRENGTH_MAP:
+                    out["League strength"] = out["League"].map(_LEAGUE_STRENGTH_MAP).fillna(50.0)
+                    tgt_ls = float(_LEAGUE_STRENGTH_MAP.get(target_league, 50.0))
+                    eps = 1e-6
+                    ratio = np.minimum(
+                        np.maximum(out["League strength"].astype(float), eps) / max(tgt_ls, eps),
+                        max(tgt_ls, eps) / np.maximum(out["League strength"].astype(float), eps)
+                    )
+                    out["Adjusted Similarity"] = out["Similarity"] * (
+                        (1 - float(league_weight_sim)) + float(league_weight_sim) * ratio
+                    )
+                else:
+                    out["Adjusted Similarity"] = out["Similarity"]
+
+                out = out.sort_values("Adjusted Similarity", ascending=False).reset_index(drop=True)
+                out.insert(0, "Rank", np.arange(1, len(out) + 1))
+
+                st.caption(f"Candidates after filters: {len(out):,}")
+                st.dataframe(out.head(int(top_n_sim)), use_container_width=True)
     except Exception as e:
-        st.info(f"Similarity block could not be computed: {e}")
-else:
-    st.caption("Pick a player to see similar players.")
+        st.info(f"Similarity block error: {e}")
+
 
 
 
