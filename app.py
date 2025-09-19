@@ -1185,7 +1185,6 @@ if not player_row.empty:
         df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
     else:
         st.warning("No 'Position' column found; cannot filter to attackers.")
-    # -----------------------------------
 
     # base filters
     df_candidates = df_candidates[
@@ -1195,63 +1194,57 @@ if not player_row.empty:
     df_candidates = df_candidates.dropna(subset=SIM_FEATURES)
     df_candidates = df_candidates[df_candidates['Player'] != player_name]
 
-    # --- Build a robust feature set we can actually use
-usable_feats = [f for f in SIM_FEATURES if f in df_candidates.columns]
+    if not df_candidates.empty:
+        # --- Build a robust feature set we can actually use
+        usable_feats = [f for f in SIM_FEATURES if f in df_candidates.columns]
+        usable_feats = [f for f in usable_feats if df_candidates[f].notna().any()]
+        if not usable_feats:
+            st.info("No usable features remain in the candidate pool for similarity.")
+            st.stop()
 
-# drop features that are all-NaN in candidates
-usable_feats = [f for f in usable_feats if df_candidates[f].notna().any()]
-if not usable_feats:
-    st.info("No usable features remain in the candidate pool for similarity.")
-    st.stop()
+        # Percentiles within candidate pool (per-league)
+        percl = df_candidates.groupby('League')[usable_feats].rank(pct=True)
 
-# Percentiles within candidate pool (per-league)
-percl = df_candidates.groupby('League')[usable_feats].rank(pct=True)
+        # Target percentiles computed over the whole df (per-league), then collapse to a single row
+        all_pct = df.groupby('League')[usable_feats].rank(pct=True)
+        mask_target = (df['Player'] == player_name)
+        if mask_target.sum() == 0:
+            st.info("Selected player not found in the dataset for percentile baseline.")
+            st.stop()
 
-# Target percentiles computed over the whole df (per-league), then collapse to a single row
-all_pct = df.groupby('League')[usable_feats].rank(pct=True)
-mask_target = (df['Player'] == player_name)
-if mask_target.sum() == 0:
-    st.info("Selected player not found in the dataset for percentile baseline.")
-    st.stop()
+        target_pct_df = all_pct.loc[mask_target, usable_feats]
+        target_pct_vec = target_pct_df.mean(axis=0).values.reshape(1, -1)
 
-target_pct_df = all_pct.loc[mask_target, usable_feats]
-# collapse duplicates by averaging percentiles across the player's rows
-target_pct_vec = target_pct_df.mean(axis=0).values.reshape(1, -1)
+        # Align weights
+        weights_vec = np.array([float(adv_weights.get(f, 1)) for f in usable_feats], dtype=float)
 
-# Align weights to the final usable feature list
-weights_vec = np.array([float(adv_weights.get(f, 1)) for f in usable_feats], dtype=float)
+        # ---- Actual-value space with robust target handling
+        scaler = StandardScaler()
+        X_candidates = scaler.fit_transform(df_candidates[usable_feats].values.astype(float))
 
-# ---- Actual-value space with robust target handling
-scaler = StandardScaler()
-X_candidates = scaler.fit_transform(df_candidates[usable_feats].values.astype(float))
+        t_raw = target_row_full[usable_feats].astype(float).values
+        if np.isnan(t_raw).any():
+            cand_median = np.nanmedian(df_candidates[usable_feats].values.astype(float), axis=0)
+            t_raw = np.where(np.isnan(t_raw), cand_median, t_raw)
+        target_std = scaler.transform([t_raw])
 
-# target raw vector (may have NaNs)
-t_raw = target_row_full[usable_feats].astype(float).values
-if np.isnan(t_raw).any():
-    # impute target NaNs with candidate medians (per feature)
-    cand_median = np.nanmedian(df_candidates[usable_feats].values.astype(float), axis=0)
-    t_raw = np.where(np.isnan(t_raw), cand_median, t_raw)
+        # ---- Distances
+        percentile_distances = np.linalg.norm((percl.values - target_pct_vec) * weights_vec, axis=1)
+        actual_value_distances = np.linalg.norm((X_candidates - target_std) * weights_vec, axis=1)
 
-target_std = scaler.transform([t_raw])  # shape (1, F)
+        combined = percentile_distances * percentile_weight + actual_value_distances * (1.0 - percentile_weight)
 
-# ---- Distances
-percentile_distances = np.linalg.norm((percl.values - target_pct_vec) * weights_vec, axis=1)
-actual_value_distances = np.linalg.norm((X_candidates - target_std) * weights_vec, axis=1)
+        # robust normalization -> similarity 0..100
+        arr = np.asarray(combined, dtype=float).ravel()
+        rng = np.ptp(arr)
+        norm = (arr - arr.min()) / (rng if rng != 0 else 1.0)
+        similarities = ((1.0 - norm) * 100.0).round(2)
 
-combined = percentile_distances * percentile_weight + actual_value_distances * (1.0 - percentile_weight)
-
-# robust normalization -> similarity 0..100
-arr = np.asarray(combined, dtype=float).ravel()
-rng = np.ptp(arr)
-norm = (arr - arr.min()) / (rng if rng != 0 else 1.0)
-similarities = ((1.0 - norm) * 100.0).round(2)
-
-
+        # --- Build output table
         out = df_candidates[['Player','Team','League','Age','Minutes played','Market value']].copy()
         out['League strength'] = out['League'].map(LS_MAP).fillna(0.0) if LS_MAP else 0.0
         tgt_ls = float(LS_MAP.get(target_league, 1.0)) if LS_MAP else 1.0
 
-        # Symmetric, always ≤ 1: penalize differences in either direction (stronger or weaker)
         eps = 1e-6
         cand_ls = np.maximum(out['League strength'].astype(float), eps)
         tgt_ls_safe = max(tgt_ls, eps)
@@ -1259,9 +1252,8 @@ similarities = ((1.0 - norm) * 100.0).round(2)
 
         out['Similarity'] = similarities
         out['Adjusted Similarity'] = (
-        out['Similarity'] * ((1 - league_weight_sim) + league_weight_sim * league_ratio)
+            out['Similarity'] * ((1 - league_weight_sim) + league_weight_sim * league_ratio)
         ) if apply_league_adjust else out['Similarity']
-
 
         out = out.sort_values('Adjusted Similarity', ascending=False).reset_index(drop=True)
         out.insert(0, 'Rank', np.arange(1, len(out) + 1))
@@ -1271,6 +1263,7 @@ similarities = ((1.0 - norm) * 100.0).round(2)
         st.info("No candidates after similarity filters.")
 else:
     st.caption("Pick a player to see similar players.")
+
 
 
 # ---------------------------- (D) CLUB FIT — self-contained block ----------------------------
