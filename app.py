@@ -1073,17 +1073,12 @@ st.header("🧭 Similar players (within adjustable pool)")
 
 # --- Feature basket declared FIRST so UI can use it ---
 SIM_FEATURES = [
-'Defensive duels per 90', 
-       'Aerial duels per 90', 'Aerial duels won, %',
-       'PAdj Interceptions', 'xG per 90', 'Non-penalty goals per 90', 'Shots per 90',
-       'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
-       'Successful dribbles, %', 'Touches in box per 90',
-       'Progressive runs per 90', 'Accelerations per 90', 'Passes per 90',
-       'Accurate passes, %',  'xA per 90', 
-       'Smart passes per 90', 'Key passes per 90',
-       'Passes to final third per 90', 'Accurate passes to final third, %',
-       'Passes to penalty area per 90', 'Accurate passes to penalty area, %',
-       'Deep completions per 90', 'Progressive passes per 90',
+'Defensive duels per 90', 'Aerial duels per 90', 'Aerial duels won, %', 'PAdj Interceptions', 'xG per 90',
+    'Non-penalty goals per 90', 'Shots per 90', 'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
+    'Successful dribbles, %', 'Touches in box per 90', 'Progressive runs per 90', 'Accelerations per 90', 'Passes per 90', 
+    'Accurate passes, %', 'xA per 90', 'Smart passes per 90', 'Key passes per 90', 
+    'Passes to final third per 90', 'Accurate passes to final third, %', 'Passes to penalty area per 90',
+    'Accurate passes to penalty area, %', 'Deep completions per 90', 'Progressive passes per 90', ]
 ]
 
 # league strength map (supports either variable name)
@@ -1092,17 +1087,10 @@ LS_MAP = globals().get('LEAGUE_STRENGTHS', globals().get('league_strengths', {})
 # defaults for advanced weights (others default to 1)
 DEFAULT_SIM_WEIGHTS = {f: 1 for f in SIM_FEATURES}
 DEFAULT_SIM_WEIGHTS.update({
-    'xG per 90': 2,
-    'Shots per 90': 2,
-    'Dribbles per 90': 3,
-    'Crosses per 90': 2,
-    'Non-penalty goals per 90': 3,
-    'xA per 90': 2,
-    'Progressive passes per 90': 2,
-    'Defensive duels per 90': 2,
-    'Passes per 90': 3,
-    'Passes to penalty area per 90': 2,
-    'Aerial duels won, %': 2,
+     'xG per 90': 2, 'Shots per 90': 2, 'Dribbles per 90': 3,
+    'Crosses per 90': 2, 'Non-penalty goals per 90': 3, 'xA per 90': 2, 
+    'Progressive passes per 90': 2, 'Defensive duels per 90': 2, 'Passes per 90': 3,
+    'Passes to penalty area per 90': 2, 'Aerial duels won, %': 2,
 })
 
 # --- Build local presets safely (no reliance on _PRESETS_CF existing) ---
@@ -1201,11 +1189,11 @@ if not player_row.empty:
             (df_candidates['League strength'] <= float(sim_max_strength))
         ]
 
-    # --- attacker filter (replaces CF-only) ---
+    # --- enforce CF-only (no toggle) ---
     if 'Position' in df_candidates.columns:
-        df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
+        df_candidates = df_candidates[df_candidates['Position'].astype(str).str.startswith('CF')]
     else:
-        st.warning("No 'Position' column found; cannot filter to attackers.")
+        st.warning("No 'Position' column found; cannot filter to CF.")
     # -----------------------------------
 
     # base filters
@@ -1297,17 +1285,9 @@ else:
 
 # default per-metric weights (preloaded, not all 1s)
 _DEFAULT_W_CF = {
-     'xG per 90': 2,
-    'Shots per 90': 2,
-    'Dribbles per 90': 3,
-    'Crosses per 90': 2,
-    'Non-penalty goals per 90': 3,
-    'xA per 90': 2,
-    'Progressive passes per 90': 2,
-    'Defensive duels per 90': 2,
-    'Passes per 90': 3,
-    'Passes to penalty area per 90': 2,
-    'Aerial duels won, %': 2,
+'xG per 90': 2, 'Shots per 90': 2, 'Dribbles per 90': 3, 'Crosses per 90': 2, 'Non-penalty goals per 90': 3, 'xA per 90': 2, 
+    'Progressive passes per 90': 2, 'Defensive duels per 90': 2, 'Passes per 90': 3,
+    'Passes to penalty area per 90': 2, 'Aerial duels won, %': 2,
 }
 
 # league strengths (use your table; no neutral fallback unless truly unknown)
@@ -1322,17 +1302,12 @@ DEFAULT_MARKET_WEIGHT = 0.2
 
 # features (fixed)
 CF_FEATURES = [
-  'Defensive duels per 90', 
-       'Aerial duels per 90', 'Aerial duels won, %',
-       'PAdj Interceptions', 'xG per 90', 'Non-penalty goals per 90', 'Shots per 90',
-       'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
-       'Successful dribbles, %', 'Touches in box per 90',
-       'Progressive runs per 90', 'Accelerations per 90', 'Passes per 90',
-       'Accurate passes, %',  'xA per 90', 
-       'Smart passes per 90', 'Key passes per 90',
-       'Passes to final third per 90', 'Accurate passes to final third, %',
-       'Passes to penalty area per 90', 'Accurate passes to penalty area, %',
-       'Deep completions per 90', 'Progressive passes per 90',
+'Defensive duels per 90', 'Aerial duels per 90', 'Aerial duels won, %', 'PAdj Interceptions', 'xG per 90',
+    'Non-penalty goals per 90', 'Shots per 90', 'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
+    'Successful dribbles, %', 'Touches in box per 90', 'Progressive runs per 90', 'Accelerations per 90', 'Passes per 90', 
+    'Accurate passes, %', 'xA per 90', 'Smart passes per 90', 'Key passes per 90', 
+    'Passes to final third per 90', 'Accurate passes to final third, %', 'Passes to penalty area per 90',
+    'Accurate passes to penalty area, %', 'Deep completions per 90', 'Progressive passes per 90', 
 ]
 
 required_cols_cf = {'Player','Team','League','Age','Position','Minutes played','Market value', *CF_FEATURES}
@@ -1376,7 +1351,7 @@ else:
 
         # Target player selector (from target leagues) default to selected player
         target_pool_cf = df[df['League'].isin(target_leagues_cf)]
-        target_pool_cf = target_pool_cf[target_pool_cf['Position'].astype(str).apply(position_filter)]
+        target_pool_cf = target_pool_cf[target_pool_cf['Position'].astype(str).str.startswith(tuple([pos_scope_cf]))]
         target_options_cf = sorted(target_pool_cf['Player'].dropna().unique())
         try:
             default_target_idx = target_options_cf.index(player_name)
@@ -1431,7 +1406,7 @@ else:
     if target_player_cf and (target_player_cf in df['Player'].values):
         # Candidate player pool
         df_candidates_cf = df[df['League'].isin(leagues_selected_cf)].copy()
-        df_candidates_cf = df_candidates_cf[df_candidates_cf['Position'].astype(str).apply(position_filter)]
+        df_candidates_cf = df_candidates_cf[df_candidates_cf['Position'].astype(str).str.startswith(tuple([pos_scope_cf]))]
 
         # Numerics + filters
         df_candidates_cf['Minutes played'] = pd.to_numeric(df_candidates_cf['Minutes played'], errors='coerce')
@@ -1451,7 +1426,7 @@ else:
         else:
             # Target (from target leagues)
             df_target_pool_cf = df[df['League'].isin(target_leagues_cf)].copy()
-            df_target_pool_cf = df_target_pool_cf[df_target_pool_cf['Position'].astype(str).apply(position_filter)]
+            df_target_pool_cf = df_target_pool_cf[df_target_pool_cf['Position'].astype(str).str.startswith(tuple([pos_scope_cf]))]
 
             if target_player_cf not in df_target_pool_cf['Player'].values:
                 st.info("Target player not found in selected target leagues.")
@@ -1489,7 +1464,6 @@ else:
                 rng = float(dist_cf.max() - dist_cf.min())
                 club_fit_base = (1 - (dist_cf - float(dist_cf.min())) / (rng if rng > 0 else 1.0)) * 100.0
                 club_profiles_cf['Club Fit %'] = club_fit_base.round(2)
-
 
                 # League strength adjustment & filter
                 club_profiles_cf['League strength'] = club_profiles_cf['League'].map(_LS_CF).fillna(50.0)
