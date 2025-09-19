@@ -1049,7 +1049,6 @@ if radar_metrics:
 # ----------------- (C) SIMILAR PLAYERS (adjustable pool) -----------------
 st.markdown("---")
 st.header("🧭 Similar players (within adjustable pool)")
-
 # --- Feature basket declared FIRST so UI can use it ---
 SIM_FEATURES = [
     'Defensive duels per 90',
