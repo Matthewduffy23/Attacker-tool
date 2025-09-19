@@ -34,8 +34,8 @@ except Exception:
             self.fit(X); return self.transform(X)
 
 # ----------------- PAGE -----------------
-st.set_page_config(page_title="Advanced ST Scouting System", layout="wide")
-st.title("🔎 Advanced ST Scouting System")
+st.set_page_config(page_title="Advanced Attacker Scouting System", layout="wide")
+st.title("🔎 Advanced Attacker Scouting System")
 
 # ----------------- CONFIG -----------------
 INCLUDED_LEAGUES = [
@@ -72,22 +72,22 @@ PRESET_LEAGUES = {
 }
 
 FEATURES = [
-    'Defensive duels per 90', 'Defensive duels won, %',
-    'Aerial duels per 90', 'Aerial duels won, %',
-    'PAdj Interceptions', 'Non-penalty goals per 90', 'xG per 90',
-    'Shots per 90', 'Shots on target, %', 'Goal conversion, %',
-    'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
-    'Successful dribbles, %', 'Head goals per 90', 'Key passes per 90',
-    'Touches in box per 90', 'Progressive runs per 90', 'Accelerations per 90',
-    'Passes per 90', 'Accurate passes, %', 'xA per 90',
-    'Passes to penalty area per 90', 'Accurate passes to penalty area, %',
-    'Deep completions per 90', 'Smart passes per 90',
+    'Successful defensive actions per 90', 'Defensive duels per 90', 'Aerial duels won, %',
+    'Non-penalty goals per 90', 'xG per 90', 'Shots per 90', 'Shots on target, %', 
+    'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90', 'Successful dribbles, %',
+    'Offensive duels per 90', 'Offensive duels won, %', 'Touches in box per 90', 
+    'Progressive runs per 90', 'Accelerations per 90', 'Passes per 90', 'Accurate passes, %', 
+    'Forward passes per 90', 'Accurate forward passes, %', 'Long passes per 90', 
+    'Accurate long passes, %', 'xA per 90', 'Smart passes per 90', 'Key passes per 90', 
+    'Passes to final third per 90', 'Accurate passes to final third, %', 
+    'Passes to penalty area per 90', 'Accurate passes to penalty area, %', 
+    'Deep completions per 90', 'Progressive passes per 90', 'Accurate progressive passes, %'
 ]
 
 POLAR_METRICS = [
     "Non-penalty goals per 90","xG per 90","Shots per 90",
     "Dribbles per 90","Passes to penalty area per 90","Touches in box per 90",
-    "Aerial duels per 90","Aerial duels won, %","Passes per 90",
+    "Smart passes per 90","Progressive passes per 90","Passes per 90",
     "Accurate passes, %","xA per 90","Progressive runs per 90",
 ]
 
@@ -104,22 +104,48 @@ def position_filter(pos):
     return False
 # -------------------------------------------
 
-# Role buckets
+# Role buckets — ATTACKER VERSION
 ROLES = {
-    'Target Man CF': {'desc': "Aerial outlet, duel dominance, occupy CBs, threaten crosses & second balls.",
-                      'metrics': { 'Aerial duels per 90': 3, 'Aerial duels won, %': 4 }},
-    'Goal Threat CF': {'desc': "High shot & xG volume, box presence, consistent SoT and finishing.",
-                       'metrics': {'Non-penalty goals per 90': 3,'Shots per 90': 1.5,'xG per 90': 3,
-                                   'Touches in box per 90': 1,'Shots on target, %': 0.5}},
-    'Link-Up CF': {'desc': "Combine & create; link play; progress & deliver to the penalty area.",
-                   'metrics': {'Passes per 90': 2, 'Passes to penalty area per 90': 1.5,
-                               'Deep completions per 90': 1, 'Smart passes per 90': 1.5,
-                               'Accurate passes, %': 1.5, 'Key passes per 90': 1,
-                               'Dribbles per 90': 2, 'Successful dribbles, %': 1,
-                               'Progressive runs per 90': 2, 'xA per 90': 3}},
-    'All in': {'desc': "Blend of creation + scoring; balanced all-round attacking profile.",
-               'metrics': { 'xA per 90': 2, 'Dribbles per 90': 2, 'xG per 90': 3, 'Non-penalty goals per 90': 3 }}
+    'Playmaker': {
+        'desc': "Primary creator: volume passing, xA, and delivery into dangerous zones.",
+        'metrics': {
+            'Passes per 90': 2,
+            'xA per 90': 3,
+            'Key passes per 90': 1,
+            'Deep completions per 90': 1.5,
+            'Smart passes per 90': 1.5,
+            'Passes to penalty area per 90': 2,
+        },
+    },
+    'Goal Threat': {
+        'desc': "High goal expectation and shot volume with strong box presence.",
+        'metrics': {
+            'xG per 90': 3,
+            'Non-penalty goals per 90': 3,
+            'Shots per 90': 2,
+            'Touches in box per 90': 2,
+        },
+    },
+    'All In': {
+        'desc': "Balanced scorer-creator blend across xG/xA, dribbling, and end product.",
+        'metrics': {
+            'xA per 90': 3,
+            'Dribbles per 90': 3,
+            'xG per 90': 2,
+            'Non-penalty goals per 90': 3,
+        },
+    },
+    'Ball Carrier': {
+        'desc': "Progresses play by beating players and advancing the ball repeatedly.",
+        'metrics': {
+            'Dribbles per 90': 4,
+            'Successful dribbles, %': 2,
+            'Progressive runs per 90': 3,
+            'Accelerations per 90': 3,
+        },
+    },
 }
+
 
 LEAGUE_STRENGTHS = {
     'England 1.':100.00,'Italy 1.':97.14,'Spain 1.':94.29,'Germany 1.':94.29,'France 1.':91.43,
@@ -375,7 +401,7 @@ def clean_attacker_label(s: str) -> str:
     s = s.replace("Shots per 90", "Shots")
     s = s.replace("Passes per 90", "Passes")
     s = s.replace("Touches in box per 90", "Touches in box")
-    s = s.replace("Aerial duels per 90", "Aerial duels")
+    s = s.replace("Progressive passes per 90", "Progressive Passes")
     s = s.replace("Progressive runs per 90", "Progressive runs")
     s = s.replace("Passes to penalty area per 90", "Passes to Pen area")
     s = s.replace("Accurate passes, %", "Pass %")
@@ -471,21 +497,29 @@ else:
    # ---------- 2) NOTES: Style / Strengths / Weaknesses ----------
 
 EXTRA_METRICS = [
-    'Defensive duels per 90','Aerial duels per 90','Aerial duels won, %',
-    'Non-penalty goals per 90','xG per 90','Shots per 90','Goal conversion, %',
-    'Crosses per 90','Accurate crosses, %','Dribbles per 90','Successful dribbles, %',
-    'Touches in box per 90','Progressive runs per 90','Passes per 90','Accurate passes, %',
-    'xA per 90','Passes to penalty area per 90','Deep completions per 90','Smart passes per 90'
+     'Defensive duels per 90', 'Defensive duels won, %',
+    'Aerial duels per 90', 'Aerial duels won, %', 
+    'PAdj Interceptions', 'Non-penalty goals per 90', 'xG per 90', 
+    'Shots per 90', 'Shots on target, %', 'Crosses per 90',
+    'Accurate crosses, %', 'Dribbles per 90', 'Successful dribbles, %',
+     'Touches in box per 90',
+    'Progressive runs per 90', 'Accelerations per 90', 'Passes per 90',
+    'Accurate passes, %', 'Forward passes per 90', 'Accurate forward passes, %',
+    'Long passes per 90', 'Accurate long passes, %', 'xA per 90',
+    'Smart passes per 90', 'Key passes per 90', 'Passes to final third per 90',
+    'Accurate passes to final third, %', 'Passes to penalty area per 90',
+    'Accurate passes to penalty area, %', 'Deep completions per 90',
+    'Progressive passes per 90', 'Accurate progressive passes, %'
 ]
 STYLE_MAP = {
     'Defensive duels per 90': {'style':'High work rate','sw':'Defensive Duels'},
     'Aerial duels won, %': {'style':None,'sw':'Aerial Duels'},
-    'Aerial duels per 90': {'style':'Target Man','sw':None},
+    'Aerial duels per 90': {'style':'Long Reference Point','sw':None},
     'Non-penalty goals per 90': {'style':None,'sw':'Scoring Goals'},
     'xG per 90': {'style':'Gets into good goal scoring positions','sw':'Attacking Positioning'},
     'Shots per 90': {'style':'Takes many shots','sw':'Shot Volume'},
     'Goal conversion, %': {'style':None,'sw':'Finishing'},
-    'Crosses per 90': {'style':'Moves into wide areas to create','sw':None},
+    'Crosses per 90': {'style':'Wide crearor','sw':'Crossing'},
     'Dribbles per 90': {'style':'Dribbler','sw':'Dribble Volume'},
     'Successful dribbles, %': {'style':None,'sw':'Dribbling Efficiency'},
     'Touches in box per 90': {'style':'Busy in the penalty box','sw':'Penalty-box Coverage'},
@@ -495,6 +529,7 @@ STYLE_MAP = {
     'xA per 90': {'style':'Creates goal scoring chances','sw':'Creativity'},
     'Passes to penalty area per 90': {'style':None,'sw':'Passes to Penalty Area'},
     'Deep completions per 90': {'style':'Gets ball into the box','sw':None},
+    'Progressive passes per 90': {'style':'Drops deep to build play','sw':None},
     'Smart passes per 90': {'style':'Attempts through balls','sw': None},
 }
 HI, LO, STYLE_T = 70, 30, 65
@@ -901,7 +936,7 @@ with st.expander("Radar settings", expanded=False):
     DEFAULT_METRICS = [
         "Non-penalty goals per 90","xG per 90","Shots per 90",
         "Dribbles per 90","Successful dribbles, %","Touches in box per 90",
-        "Aerial duels per 90","Aerial duels won, %","Passes per 90",
+        "Smart passes per 90","Progressive passes per 90","Passes per 90",
         "Accurate passes, %","xA per 90"
     ]
     numeric_cols = df.select_dtypes(include="number").columns.tolist()
@@ -915,8 +950,8 @@ def clean_label_r(s: str) -> str:
     s = s.replace("Non-penalty goals per 90", "Non-Pen Goals")
     s = s.replace("xG per 90", "xG").replace("xA per 90", "xA")
     s = s.replace("Shots per 90", "Shots").replace("Passes per 90", "Passes")
-    s = s.replace("Touches in box per 90", "Touches in box").replace("Aerial duels per 90", "Aerial duels")
-    s = s.replace("Successful dribbles, %", "Dribble %").replace("Accurate passes, %", "Pass %")
+    s = s.replace("Touches in box per 90", "Touches in box").replace("Progressive passes per 90", "Progressive Passes")
+    s = s.replace("Successful dribbles, %", "Dribble %").replace("Smart passes per 90", "Smart passes")
     s = re.sub(r"\s*per\s*90", "", s, flags=re.I); return s
 
 if radar_metrics:
@@ -1016,12 +1051,17 @@ st.header("🧭 Similar players (within adjustable pool)")
 
 # --- Feature basket declared FIRST so UI can use it ---
 SIM_FEATURES = [
-    'Defensive duels per 90', 'Aerial duels per 90', 'Aerial duels won, %',
-    'Non-penalty goals per 90', 'xG per 90', 'Shots per 90',
-    'Crosses per 90', 'Dribbles per 90', 'Successful dribbles, %',
-    'Touches in box per 90', 'Progressive runs per 90',
-    'Passes per 90', 'Accurate passes, %', 'xA per 90', 'Smart passes per 90',
-    'Passes to penalty area per 90', 'Deep completions per 90'
+'Defensive duels per 90', 
+       'Aerial duels per 90', 'Aerial duels won, %',
+       'PAdj Interceptions', 'xG per 90', 'Non-penalty goals per 90', 'Shots per 90',
+       'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
+       'Successful dribbles, %', 'Touches in box per 90',
+       'Progressive runs per 90', 'Accelerations per 90', 'Passes per 90',
+       'Accurate passes, %',  'xA per 90', 
+       'Smart passes per 90', 'Key passes per 90',
+       'Passes to final third per 90', 'Accurate passes to final third, %',
+       'Passes to penalty area per 90', 'Accurate passes to penalty area, %',
+       'Deep completions per 90', 'Progressive passes per 90',
 ]
 
 # league strength map (supports either variable name)
@@ -1030,14 +1070,17 @@ LS_MAP = globals().get('LEAGUE_STRENGTHS', globals().get('league_strengths', {})
 # defaults for advanced weights (others default to 1)
 DEFAULT_SIM_WEIGHTS = {f: 1 for f in SIM_FEATURES}
 DEFAULT_SIM_WEIGHTS.update({
-    'Passes per 90': 2,
-    'Dribbles per 90': 2,
-    'Non-penalty goals per 90': 2,
-    'Aerial duels per 90': 2,
-    'Aerial duels won, %': 2,
-    'xA per 90': 2,
     'xG per 90': 2,
-    'Touches in box per 90': 2,
+    'Shots per 90': 2,
+    'Dribbles per 90': 3,
+    'Crosses per 90': 2,
+    'Non-penalty goals per 90': 3,
+    'xA per 90': 2,
+    'Progressive passes per 90': 2,
+    'Defensive duels per 90': 2,
+    'Passes per 90': 3,
+    'Passes to penalty area per 90': 2,
+    'Aerial duels won, %': 2,
 })
 
 # --- Build local presets safely (no reliance on _PRESETS_CF existing) ---
@@ -1232,16 +1275,17 @@ else:
 
 # default per-metric weights (preloaded, not all 1s)
 _DEFAULT_W_CF = {
-    'Passes per 90': 2,
-    'Accurate passes, %': 2,
-    'Dribbles per 90': 2,
-    'Non-penalty goals per 90': 2,
+     'xG per 90': 2,
     'Shots per 90': 2,
-    'Successful dribbles, %': 2,
-    'Aerial duels won, %': 2,
+    'Dribbles per 90': 3,
+    'Crosses per 90': 2,
+    'Non-penalty goals per 90': 3,
     'xA per 90': 2,
-    'xG per 90': 2,
-    'Touches in box per 90': 2,
+    'Progressive passes per 90': 2,
+    'Defensive duels per 90': 2,
+    'Passes per 90': 3,
+    'Passes to penalty area per 90': 2,
+    'Aerial duels won, %': 2,
 }
 
 # league strengths (use your table; no neutral fallback unless truly unknown)
@@ -1256,13 +1300,17 @@ DEFAULT_MARKET_WEIGHT = 0.2
 
 # features (fixed)
 CF_FEATURES = [
-    'Defensive duels per 90','Aerial duels per 90','Aerial duels won, %','PAdj Interceptions',
-    'Non-penalty goals per 90','xG per 90','Shots per 90','Shots on target, %',
-    'Crosses per 90','Accurate crosses, %','Dribbles per 90','Successful dribbles, %',
-    'Offensive duels per 90','Touches in box per 90','Progressive runs per 90','Accelerations per 90',
-    'Passes per 90','Accurate passes, %','xA per 90','Smart passes per 90',
-    'Passes to final third per 90','Passes to penalty area per 90','Accurate passes to penalty area, %',
-    'Deep completions per 90'
+  'Defensive duels per 90', 
+       'Aerial duels per 90', 'Aerial duels won, %',
+       'PAdj Interceptions', 'xG per 90', 'Non-penalty goals per 90', 'Shots per 90',
+       'Crosses per 90', 'Accurate crosses, %', 'Dribbles per 90',
+       'Successful dribbles, %', 'Touches in box per 90',
+       'Progressive runs per 90', 'Accelerations per 90', 'Passes per 90',
+       'Accurate passes, %',  'xA per 90', 
+       'Smart passes per 90', 'Key passes per 90',
+       'Passes to final third per 90', 'Accurate passes to final third, %',
+       'Passes to penalty area per 90', 'Accurate passes to penalty area, %',
+       'Deep completions per 90', 'Progressive passes per 90',
 ]
 
 required_cols_cf = {'Player','Team','League','Age','Position','Minutes played','Market value', *CF_FEATURES}
