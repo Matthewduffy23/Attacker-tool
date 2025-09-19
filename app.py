@@ -126,15 +126,6 @@ ROLES = {
             'Touches in box per 90': 2,
         },
     },
-    'All In': {
-        'desc': "Balanced scorer-creator blend across xG/xA, dribbling, and end product.",
-        'metrics': {
-            'xA per 90': 3,
-            'Dribbles per 90': 3,
-            'xG per 90': 2,
-            'Non-penalty goals per 90': 3,
-        },
-    },
     'Ball Carrier': {
         'desc': "Progresses play by beating players and advancing the ball repeatedly.",
         'metrics': {
@@ -142,6 +133,15 @@ ROLES = {
             'Successful dribbles, %': 2,
             'Progressive runs per 90': 3,
             'Accelerations per 90': 3,
+        },
+    },
+    'All In': {
+        'desc': "Balanced scorer-creator blend across xG/xA, dribbling, and end product.",
+        'metrics': {
+            'xA per 90': 3,
+            'Dribbles per 90': 3,
+            'xG per 90': 2,
+            'Non-penalty goals per 90': 3,
         },
     },
 }
@@ -403,6 +403,7 @@ def clean_attacker_label(s: str) -> str:
     s = s.replace("Touches in box per 90", "Touches in box")
     s = s.replace("Progressive passes per 90", "Progressive Passes")
     s = s.replace("Progressive runs per 90", "Progressive runs")
+    s = s.replace("Smart passes per 90", "Smart Passes")
     s = s.replace("Passes to penalty area per 90", "Passes to Pen area")
     s = s.replace("Accurate passes, %", "Pass %")
     return s
@@ -1535,6 +1536,29 @@ else:
                             "strength_range": (int(min_strength_cf), int(max_strength_cf)),
                             "n_teams": int(results_cf.shape[0]),
                         })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
