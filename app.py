@@ -1543,7 +1543,7 @@ else:
 
                     # ---------------- Results ----------------
                     results_cf = club_profiles_cf[[
-                        'Team','League','League strength','Avg Team Market Value',
+                        'Team','League','League strength','Position',
                         'Club Fit %','Adjusted Fit %','Final Fit %'
                     ]].copy()
 
