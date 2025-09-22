@@ -1229,35 +1229,67 @@ if not player_row.empty:
         df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
     else:
         st.warning("No 'Position' column found; cannot apply attacker position filter.")
-    # ------------------------------------------------------------
 
     # base filters
+    df_candidates['Minutes played'] = pd.to_numeric(df_candidates['Minutes played'], errors='coerce')
+    df_candidates['Age'] = pd.to_numeric(df_candidates['Age'], errors='coerce')
+
     df_candidates = df_candidates[
         df_candidates['Minutes played'].between(sim_min_minutes, sim_max_minutes) &
         df_candidates['Age'].between(sim_min_age, sim_max_age)
     ]
-    df_candidates = df_candidates.dropna(subset=SIM_FEATURES)
+
+    # ---- De-duplicate candidates: one row per Player (keep most minutes, then stronger league) ----
+    df_candidates['League strength'] = df_candidates['League'].map(LS_MAP).fillna(0.0) if LS_MAP else 0.0
+    df_candidates = (
+        df_candidates.sort_values(
+            ['Player', 'Minutes played', 'League strength'],
+            ascending=[True, False, False]
+        )
+        .drop_duplicates(subset=['Player'], keep='first')
+    )
+
+    # Remove the selected player from candidates
     df_candidates = df_candidates[df_candidates['Player'] != player_name]
 
-    if not df_candidates.empty:
-        # percentile ranks within candidate pool (per-league for robustness)
-        percl = df_candidates.groupby('League')[SIM_FEATURES].rank(pct=True)
-        # target percentiles computed on df global per-league
-        target_percentiles = df.groupby('League')[SIM_FEATURES].rank(pct=True).loc[df['Player'] == player_name]
+    # Ensure features are present and numeric
+    df_candidates = df_candidates.dropna(subset=SIM_FEATURES)
+    for f in SIM_FEATURES:
+        df_candidates[f] = pd.to_numeric(df_candidates[f], errors='coerce')
+    df_candidates = df_candidates.dropna(subset=SIM_FEATURES)
 
-        # standardize on candidate pool
+    # ---- Robust target percentiles (1×F) within the target league ----
+    # compute percentile rank of the target player against *its league*
+    league_mask = (df['League'] == target_league)
+    league_block = df.loc[league_mask, SIM_FEATURES].apply(pd.to_numeric, errors='coerce')
+    league_ranks = league_block.rank(pct=True)
+    # locate target row within that league
+    target_mask_in_league = league_mask & (df['Player'] == player_name)
+    if not target_mask_in_league.any():
+        st.info("Target player not found in league block for percentile calc.")
+        target_percentiles_vec = np.full(len(SIM_FEATURES), 0.5)  # safe default
+    else:
+        # If duplicates exist, take the first (we already pick one above, but this is extra safety)
+        target_percentiles_vec = league_ranks.loc[target_mask_in_league].iloc[0].values
+
+    if not df_candidates.empty:
+        # percentile ranks for candidates (per-league robustness)
+        percl = df_candidates.groupby('League')[SIM_FEATURES].rank(pct=True).values
+
+        # standardize on candidate pool (actual values)
         scaler = StandardScaler()
         standardized_features = scaler.fit_transform(df_candidates[SIM_FEATURES])
-        target_features_standardized = scaler.transform([target_row_full[SIM_FEATURES].values])
+        target_features_standardized = scaler.transform([target_row_full[SIM_FEATURES].astype(float).values])
 
-        # feature weights vector (from sliders)
+        # weights
         weights_vec = np.array([float(adv_weights.get(f, 1)) for f in SIM_FEATURES], dtype=float)
 
-        percentile_distances = np.linalg.norm((percl.values - target_percentiles.values) * weights_vec, axis=1)
+        # distances
+        percentile_distances = np.linalg.norm((percl - target_percentiles_vec) * weights_vec, axis=1)
         actual_value_distances = np.linalg.norm((standardized_features - target_features_standardized) * weights_vec, axis=1)
         combined = percentile_distances * percentile_weight + actual_value_distances * (1.0 - percentile_weight)
 
-        # robust normalization -> similarity 0..100
+        # normalize -> similarity 0..100
         arr = np.asarray(combined, dtype=float).ravel()
         rng = np.ptp(arr)
         norm = (arr - arr.min()) / (rng if rng != 0 else 1.0)
@@ -1267,7 +1299,7 @@ if not player_row.empty:
         out['League strength'] = out['League'].map(LS_MAP).fillna(0.0) if LS_MAP else 0.0
         tgt_ls = float(LS_MAP.get(target_league, 1.0)) if LS_MAP else 1.0
 
-        # Symmetric, always ≤ 1: penalize differences in either direction (stronger or weaker)
+        # symmetric league ratio (≤1)
         eps = 1e-6
         cand_ls = np.maximum(out['League strength'].astype(float), eps)
         tgt_ls_safe = max(tgt_ls, eps)
@@ -1286,6 +1318,7 @@ if not player_row.empty:
         st.info("No candidates after similarity filters.")
 else:
     st.caption("Pick a player to see similar players.")
+
 
 
 # ---------------------------- (D) CLUB FIT — self-contained block ----------------------------
