@@ -312,7 +312,7 @@ if enable_min_perf and sel_metrics:
 def fmt_cols(df_in: pd.DataFrame, score_col: str) -> pd.DataFrame:
     out = df_in.copy()
     out[score_col] = out[score_col].round(round_to).astype(int if round_to == 0 else float)
-    cols = ["Player","Team","League","Age","Contract expires","League Strength", score_col]
+    cols = ["Player","Team","League","Position", "Age","Contract expires","League Strength", score_col]
     return out[cols]
 
 def top_table(df_in: pd.DataFrame, role: str, head_n: int) -> pd.DataFrame:
