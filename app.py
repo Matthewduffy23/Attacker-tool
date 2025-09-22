@@ -1075,11 +1075,13 @@ if not player_row.empty:
             (df_candidates['League strength'] <= float(sim_max_strength))
         ]
 
-    # --- enforce CF-only (no toggle) ---
-    if 'Position' in df_candidates.columns:
-        df_candidates = df_candidates[df_candidates['Position'].astype(str).str.startswith('CF')]
-    else:
-        st.warning("No 'Position' column found; cannot filter to CF.")
+# --- enforce attacker position filter (RW/LW/AMF family) ---
+if 'Position' in df_candidates.columns:
+    df_candidates = df_candidates[df_candidates['Position'].astype(str).apply(position_filter)]
+else:
+    st.warning("No 'Position' column found; cannot apply attacker position filter.")
+# ------------------------------------------------------------
+
     # -----------------------------------
 
     # base filters
