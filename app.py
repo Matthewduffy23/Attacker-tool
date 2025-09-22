@@ -1114,7 +1114,7 @@ if not player_row.empty:
         norm = (arr - arr.min()) / (rng if rng != 0 else 1.0)
         similarities = ((1.0 - norm) * 100.0).round(2)
 
-        out = df_candidates[['Player','Team','League','Age','Minutes played','Market value']].copy()
+        out = df_candidates[['Player','Team','League','Position','Age','Minutes played','Market value']].copy()
         out['League strength'] = out['League'].map(LS_MAP).fillna(0.0) if LS_MAP else 0.0
         tgt_ls = float(LS_MAP.get(target_league, 1.0)) if LS_MAP else 1.0
 
