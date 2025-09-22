@@ -36,6 +36,7 @@ except Exception:
 # ----------------- PAGE -----------------
 st.set_page_config(page_title="Advanced Attacker Scouting System", layout="wide")
 st.title("🔎 Advanced Attacker Scouting System")
+st.caption("Use the sidebar to shape your pool. Each section explains what you’re seeing and why.")
 
 # ----------------- CONFIG -----------------
 INCLUDED_LEAGUES = [
