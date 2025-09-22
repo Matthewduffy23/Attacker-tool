@@ -1138,8 +1138,6 @@ else:
         st.dataframe(out.head(int(top_n_sim)), use_container_width=True)
     else:
         st.info("No candidates after similarity filters.")
-else:
-    st.caption("Pick a player to see similar players.")
 
 # ----------------- (B) COMPARISON RADAR (SB-STYLE) -----------------
 st.markdown("---")
