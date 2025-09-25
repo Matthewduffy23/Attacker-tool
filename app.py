@@ -1011,6 +1011,7 @@ else:
         ("Crossing %", "Accurate crosses, %"),
         ("Goals: Non-Penalty", "Non-penalty goals per 90"),
         ("xG", "xG per 90"),
+        ("Conversion Rate %", "Goal conversion, %"),
         ("Expected Assists", "xA per 90"),
         ("Offensive Duels", "Offensive duels per 90"),
         ("Offensive Duel %", "Offensive duels won, %"),
@@ -1026,7 +1027,6 @@ else:
         ("Defensive Duels", "Defensive duels per 90"),
         ("Defensive Duel %", "Defensive duels won, %"),
         ("PAdj Interceptions", "PAdj Interceptions"),
-        ("Shots blocked", "Shots blocked per 90"),
         ("Succ. def acts", "Successful defensive actions per 90"),
     ]: DEFENSIVE.append((lab, pct_of(met), val_of(met)[1]))
 
