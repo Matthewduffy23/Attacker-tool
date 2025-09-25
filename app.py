@@ -530,7 +530,7 @@ STYLE_MAP = {
         'sw': 'Finishing',
     },
     'Crosses per 90': {
-        'style': 'Wide crearor',
+        'style': 'Wide Creator',
         'sw': 'Crossing',
     },
     'Dribbles per 90': {
