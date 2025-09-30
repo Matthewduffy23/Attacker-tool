@@ -1638,7 +1638,7 @@ else:
         left_margin, 1 - top_margin - 0.002,
         f"| {pos} | {name} | {team} |",
         ha="left", va="top",
-        fontsize=22, fontweight="500", color=TITLE,
+        fontsize=22, fontweight="650", color=TITLE,
         fontfamily=FONT_TITLE_FAMILY
     )
 
