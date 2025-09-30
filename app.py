@@ -1494,16 +1494,16 @@ else:
 
 # ============================ (Z) THREE-PANEL PERCENTILE BOARD — light theme + in-figure header ============================
 from io import BytesIO
+import uuid
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.transforms import ScaledTranslation, blended_transform_factory
 from matplotlib import font_manager as fm
-import uuid
 
 st.markdown("---")
 st.header("📋 Feature Z — White Percentile Board (uniform rows)")
 
-# ---------- robust getters ----------
+# ---------- helpers ----------
 def _safe_get(df_or_series, key, default="—"):
     try:
         if hasattr(df_or_series, "iloc"):
@@ -1515,9 +1515,7 @@ def _safe_get(df_or_series, key, default="—"):
     except Exception:
         return default
 
-# ---------- optional Tableau fonts (fallbacks if not installed) ----------
 def _font_name_or_fallback(pref_names, fallback="DejaVu Sans"):
-    # return the first available font among pref_names else fallback
     installed = {f.name for f in fm.fontManager.ttflist}
     for n in pref_names:
         if n in installed:
@@ -1531,17 +1529,17 @@ if player_row.empty:
     st.info("Pick a player above.")
 else:
     # -------- header fields (fallbacks if missing) --------
-    pos    = _safe_get(player_row, "Position", "CM/DM/RW")
-    name   = _safe_get(player_row, "Player", _safe_get(player_row, "Name", "David Kasumu"))
-    team   = _safe_get(player_row, "Team", "Carlisle United")
-    age    = _safe_get(player_row, "Age", "31.0")
-    games  = _safe_get(player_row, "Games", _safe_get(player_row, "Apps", "32"))
-    goals  = _safe_get(player_row, "Goals", "3")
-    assists= _safe_get(player_row, "Assists", "2")
-    xg_tot = _safe_get(player_row, "xG", _safe_get(player_row, "Total xG", "—"))
-    xa_tot = _safe_get(player_row, "xA", _safe_get(player_row, "Total xA", "—"))
-    height = _safe_get(player_row, "Height", "5'11")
-    foot   = _safe_get(player_row, "Foot", "Right")
+    pos     = _safe_get(player_row, "Position", "CM/DM/RW")
+    name    = _safe_get(player_row, "Player", _safe_get(player_row, "Name", "Kadeem Harris"))
+    team    = _safe_get(player_row, "Team", "Carlisle United")
+    age     = _safe_get(player_row, "Age", "31.0")
+    games   = _safe_get(player_row, "Games", _safe_get(player_row, "Apps", "32"))
+    goals   = _safe_get(player_row, "Goals", "3")
+    assists = _safe_get(player_row, "Assists", "2")
+    xg_tot  = _safe_get(player_row, "Total xG", _safe_get(player_row, "xG", "—"))
+    xa_tot  = _safe_get(player_row, "Total xA", _safe_get(player_row, "xA", "—"))
+    height  = _safe_get(player_row, "Height", "174")
+    foot    = _safe_get(player_row, "Foot", "right")
 
     # ----- assemble sections from your existing calcs -----
     ATTACKING = []
@@ -1623,43 +1621,35 @@ else:
     top_margin, bot_margin    = 0.035, 0.07
     header_h, gap_between     = 0.06, 0.020
 
-    # header block (two lines)
-    title_row_h     = 0.065
-    sub_row_h       = 0.040  # slightly more room for many fields
+    title_row_h     = 0.065   # Tableau Bold 22 look
+    sub_row_h       = 0.040   # Tableau Book 10 with many fields
     header_block_h  = title_row_h + sub_row_h + 0.010
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
     BAR_FRAC = 0.85
 
-    # gutter calc (kept for parity)
+    # gutter probe (kept for alignment)
     probe = fig.text(0, 0, "Successful Defensive Actions", fontsize=11, fontweight="bold", color=LABEL, alpha=0)
-    fig.canvas.draw()
-    probe.remove()
+    fig.canvas.draw(); probe.remove()
     gutter = 0.215
 
     ticks = np.arange(0, 101, 10)
     x_center_plot = (left_margin + gutter + (1 - right_margin)) / 2.0
 
-    # ----- header drawing helpers -----
-    def draw_title_row():
-        # Row 1: Tableau Bold 22
-        fig.text(
-            left_margin, 1 - top_margin - 0.002,
-            f"| {pos} | {name} | {team} |",
-            ha="left", va="top",
-            fontsize=22, fontweight="800",
-            color=TITLE, fontfamily=FONT_TITLE_FAMILY
-        )
+    # ----- header rows -----
+    fig.text(
+        left_margin, 1 - top_margin - 0.002,
+        f"| {pos} | {name} | {team} |",
+        ha="left", va="top",
+        fontsize=22, fontweight="800", color=TITLE,
+        fontfamily=FONT_TITLE_FAMILY
+    )
 
+    # draw bold label + normal value pairs with precise spacing
     def draw_info_pairs():
-        """
-        Row 2: draw bold labels + normal values inline by measuring text advance.
-        """
         y = 1 - top_margin - title_row_h
         x = left_margin
-
-        # (label, value) pairs in display order
         pairs = [
             ("Age: ",    age),
             ("Games: ",  games),
@@ -1671,37 +1661,27 @@ else:
             ("Foot: ",   foot),
         ]
         sep = "  |  "
-
-        # draw and advance
         renderer = fig.canvas.get_renderer()
         for i, (lab, val) in enumerate(pairs):
-            t1 = fig.text(x, y, lab,
-                          ha="left", va="top",
-                          fontsize=10, fontweight="700",
-                          color=LABEL, fontfamily=FONT_BOOK_FAMILY)
-            fig.canvas.draw()
-            bb1 = t1.get_window_extent(renderer=renderer)
+            t1 = fig.text(x, y, lab, ha="left", va="top",
+                          fontsize=10, fontweight="700", color=LABEL,
+                          fontfamily=FONT_BOOK_FAMILY)
+            fig.canvas.draw(); bb1 = t1.get_window_extent(renderer=renderer)
             x += (bb1.width / fig.bbox.width)
 
-            t2 = fig.text(x, y, str(val),
-                          ha="left", va="top",
-                          fontsize=10, fontweight="400",
-                          color=LABEL, fontfamily=FONT_BOOK_FAMILY)
-            fig.canvas.draw()
-            bb2 = t2.get_window_extent(renderer=renderer)
+            t2 = fig.text(x, y, str(val), ha="left", va="top",
+                          fontsize=10, fontweight="400", color=LABEL,
+                          fontfamily=FONT_BOOK_FAMILY)
+            fig.canvas.draw(); bb2 = t2.get_window_extent(renderer=renderer)
             x += (bb2.width / fig.bbox.width)
 
             if i != len(pairs) - 1:
-                t3 = fig.text(x, y, sep,
-                              ha="left", va="top",
-                              fontsize=10, fontweight="400",
-                              color="#555555", fontfamily=FONT_BOOK_FAMILY)
-                fig.canvas.draw()
-                bb3 = t3.get_window_extent(renderer=renderer)
+                t3 = fig.text(x, y, sep, ha="left", va="top",
+                              fontsize=10, fontweight="400", color="#555555",
+                              fontfamily=FONT_BOOK_FAMILY)
+                fig.canvas.draw(); bb3 = t3.get_window_extent(renderer=renderer)
                 x += (bb3.width / fig.bbox.width)
 
-    # draw header rows
-    draw_title_row()
     draw_info_pairs()
 
     # thin divider under header
@@ -1715,7 +1695,6 @@ else:
         n = len(tuples)
         panel_h = header_h + n * row_slot
 
-        # section title
         fig.text(
             left_margin, panel_top - 0.012, title,
             ha="left", va="top",
@@ -1723,7 +1702,6 @@ else:
             color=TITLE, fontfamily=FONT_TITLE_FAMILY
         )
 
-        # bars axis
         ax = fig.add_axes([
             left_margin + gutter,
             panel_top - header_h - n * row_slot,
@@ -1733,37 +1711,50 @@ else:
         ax.set_facecolor(AX_BG)
         ax.set_xlim(0, 100)
         ax.set_ylim(-0.5, n - 0.5)
+
+        # Hide spines and ALL ticks/labels (prevents stray 10.0 / 7.5 etc.)
         for s in ax.spines.values():
             s.set_visible(False)
         ax.tick_params(axis="x", bottom=False, labelbottom=False, length=0)
+        ax.tick_params(axis="y", left=False,  labelleft=False,  length=0)
+        ax.set_yticks([])
+        ax.set_yticklabels([])
+        ax.get_yaxis().set_visible(False)
 
-        # tracks
+        # Tracks
         for i in range(n):
             ax.add_patch(plt.Rectangle((0, i - (BAR_FRAC/2)), 100, BAR_FRAC,
                                        color=TRACK, ec="none", zorder=0.5))
 
-        # vertical gridlines
+        # Vertical gridlines
         for gx in ticks:
             ax.vlines(gx, -0.5, n - 0.5, colors=(0, 0, 0, 0.16), linewidth=0.8, zorder=0.75)
 
-        # bars + value labels (fixed right column)
-        # use a blended transform so x is in axes coords (1.0 = right edge), y in data coords
-        right_col = blended_transform_factory(ax.transAxes, ax.transData)
+        # Bars + value labels (inside bar when possible)
         for i, (lab, pct, val_str) in enumerate(tuples[::-1]):  # top-first
             y = i
-            bar_w = max(0.0, min(100.0, float(pct)))
-            ax.add_patch(plt.Rectangle((0, y - (BAR_FRAC/2)), bar_w, BAR_FRAC,
-                                       color=pct_to_rgb(bar_w), ec="none", zorder=1.0))
-            # value text in a clean right column (no random numbers at the gutter)
-            ax.text(1.005, y, val_str,
-                    transform=right_col, ha="left", va="center",
-                    fontsize=8, fontweight="400", color="#0B0B0B",
-                    clip_on=False, zorder=2.0)
+            bar_w = float(np.clip(pct, 0.0, 100.0))
 
-        # dotted 50% line
+            ax.add_patch(plt.Rectangle((0, y - (BAR_FRAC / 2)), bar_w, BAR_FRAC,
+                                       color=pct_to_rgb(bar_w), ec="none", zorder=1.0))
+
+            pad = 0.8  # data units
+            if bar_w >= 12:  # place inside-right
+                x_text = max(0.0, bar_w - pad)
+                ha = "right"
+            else:            # too short → just outside
+                x_text = min(100.0, bar_w + pad)
+                ha = "left"
+
+            ax.text(x_text, y, val_str,
+                    ha=ha, va="center",
+                    fontsize=8, fontweight="400", color="#0B0B0B",
+                    zorder=2.0, clip_on=False)
+
+        # 50% reference
         ax.axvline(50, color="#000000", ls=(0, (4, 4)), lw=1.5, alpha=0.7, zorder=3.5)
 
-        # metric labels in left gutter
+        # Metric labels in left gutter (figure coords to keep alignment)
         for i, (lab, _, _) in enumerate(tuples[::-1]):
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
             fig.text(left_margin, y_fig, lab,
@@ -1771,7 +1762,7 @@ else:
                      fontsize=10, fontweight="bold",
                      color=LABEL, fontfamily=FONT_BOOK_FAMILY)
 
-        # bottom ticks on last panel
+        # Bottom ticks on the last panel
         if show_xticks:
             trans = ax.get_xaxis_transform()
             INNER_PCT_OFFSET_PT, EDGE_0, EDGE_100 = 7, 4, 10
@@ -1796,7 +1787,7 @@ else:
                     ax.text(gx, y_label, "%", transform=trans + offset_inner,
                             ha="left", va="top", fontsize=10, fontweight="700", color="#000000")
 
-        # section divider
+        # Section divider
         if draw_bottom_divider:
             y0 = panel_top - panel_h - 0.008
             fig.lines.append(plt.Line2D(
@@ -1812,14 +1803,14 @@ else:
         is_last = (idx == len(sections) - 1)
         y_top = draw_panel(y_top, title, data, show_xticks=is_last, draw_bottom_divider=not is_last)
 
-    # footer caption
+    # Footer caption
     fig.text(x_center_plot, bot_margin * 0.1, "Percentile Rank",
              ha="center", va="center", fontsize=9, fontweight="bold",
              color=LABEL, fontfamily=FONT_BOOK_FAMILY)
 
     st.pyplot(fig, use_container_width=True)
 
-    # download (unique key to avoid duplicate element id)
+    # Download (unique key prevents duplicate-id error)
     buf = BytesIO()
     fig.savefig(buf, format="png", dpi=130, bbox_inches="tight", facecolor=fig.get_facecolor())
     buf.seek(0)
