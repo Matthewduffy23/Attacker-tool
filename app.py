@@ -1360,7 +1360,7 @@ else:
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
-    BAR_FRAC = 0.85
+    BAR_FRAC = 0.88
 
     # label gutter width
     probe = fig.text(0, 0, "Successful Defensive Actions", fontsize=11, fontweight="bold", color=LABEL, alpha=0)
@@ -1477,8 +1477,8 @@ else:
         y_top = draw_panel(y_top, title, data, show_xticks=is_last, draw_bottom_divider=not is_last)
 
     # Bottom caption — slightly lower
-    fig.text(x_center_plot, bot_margin * 0.38, "Percentile Rank",
-             ha="center", va="center", fontsize=11, fontweight="bold", color=LABEL)
+    fig.text(x_center_plot, bot_margin * 0.25, "Percentile Rank",
+             ha="center", va="center", fontsize=9, fontweight="bold", color=LABEL)
 
     st.pyplot(fig, use_container_width=True)
 
