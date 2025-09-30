@@ -1354,13 +1354,13 @@ else:
     left_margin  = 0.035
     right_margin = 0.020
     top_margin   = 0.035
-    bot_margin   = 0.095
+    bot_margin   = 0.07
     header_h     = 0.06
     gap_between  = 0.020
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
-    BAR_FRAC = 0.80
+    BAR_FRAC = 0.85
 
     # label gutter width
     probe = fig.text(0, 0, "Successful Defensive Actions", fontsize=11, fontweight="bold", color=LABEL, alpha=0)
