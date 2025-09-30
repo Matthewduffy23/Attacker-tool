@@ -1306,16 +1306,16 @@ else:
         ("Accelerations", "Accelerations per 90"),
         ("Deep completions", "Deep completions per 90"),
         ("Dribbles", "Dribbles per 90"),
-        ("Dribbling %", "Successful dribbles, %"),
+        ("Dribbling Success %", "Successful dribbles, %"),
         ("Forward Passes", "Forward passes per 90"),
-        ("Forward Pass %", "Accurate forward passes, %"),
+        ("Forward Passing %", "Accurate forward passes, %"),
         ("Key passes", "Key passes per 90"),
         ("Long Passes", "Long passes per 90"),
         ("Passes", "Passes per 90"),
         ("Passing %", "Accurate passes, %"),
-        ("Passes to F3rd", "Passes to final third per 90"),
-        ("Passes to Pen-Area", "Passes to penalty area per 90"),
-        ("Passes to Pen Area %", "Accurate passes to penalty area, %"),
+        ("Passes to Final 3rd", "Passes to final third per 90"),
+        ("Passes to Penalty Area", "Passes to penalty area per 90"),
+        ("Passes to Penalty Area %", "Accurate passes to penalty area, %"),
         ("Progessive Passes", "Progressive passes per 90"),
         ("Progressive Runs", "Progressive runs per 90"),
         ("Smart Passes", "Smart passes per 90"),
@@ -1328,7 +1328,7 @@ else:
     # ----- styling (dark Tableau-ish canvas) -----
     PAGE_BG = "#0a0f1c"
     AX_BG   = "#0f151f"
-    TRACK   = "#1c2635"
+    TRACK   = "#1b2636"
     TITLE   = "#f3f5f7"
     LABEL   = "#e8eef8"
     DIVIDER = "#ffffff"
@@ -1360,14 +1360,14 @@ else:
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
-    BAR_FRAC = 0.88
+    BAR_FRAC = 0.85
 
     # label gutter width
     probe = fig.text(0, 0, "Successful Defensive Actions", fontsize=11, fontweight="bold", color=LABEL, alpha=0)
     fig.canvas.draw()
     lab_w = probe.get_window_extent(renderer=fig.canvas.get_renderer()).width / fig.bbox.width
     probe.remove()
-    gutter = 0.225
+    gutter = 0.215
 
 
     ticks = np.arange(0, 101, 10)  # 0,10,...,100
