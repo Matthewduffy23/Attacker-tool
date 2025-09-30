@@ -1638,7 +1638,7 @@ else:
         left_margin, 1 - top_margin - 0.002,
         f"| {pos} | {name} | {team} |",
         ha="left", va="top",
-        fontsize=22, fontweight="800", color=TITLE,
+        fontsize=22, fontweight="500", color=TITLE,
         fontfamily=FONT_TITLE_FAMILY
     )
 
@@ -1648,6 +1648,7 @@ else:
         x = left_margin
         pairs = [
             ("Age: ",    age),
+            ("Foot: ",foot),
             ("Games: ",  games),
             ("Goals: ",  goals),
             ("Assists: ",assists),
