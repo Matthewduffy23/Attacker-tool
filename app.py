@@ -1477,7 +1477,7 @@ else:
         y_top = draw_panel(y_top, title, data, show_xticks=is_last, draw_bottom_divider=not is_last)
 
     # Bottom caption — slightly lower
-    fig.text(x_center_plot, bot_margin * 0.25, "Percentile Rank",
+    fig.text(x_center_plot, bot_margin * 0.1, "Percentile Rank",
              ha="center", va="center", fontsize=9, fontweight="bold", color=LABEL)
 
     st.pyplot(fig, use_container_width=True)
