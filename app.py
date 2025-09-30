@@ -1648,7 +1648,6 @@ else:
         x = left_margin
         pairs = [
             ("Age: ",    age),
-            ("Foot: ",foot),
             ("Games: ",  games),
             ("Goals: ",  goals),
             ("Assists: ",assists),
