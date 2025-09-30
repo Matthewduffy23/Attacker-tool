@@ -1497,7 +1497,7 @@ from io import BytesIO
 import uuid
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.transforms import ScaledTranslation, blended_transform_factory
+from matplotlib.transforms import ScaledTranslation
 from matplotlib import font_manager as fm
 
 st.markdown("---")
@@ -1536,10 +1536,6 @@ else:
     games   = _safe_get(player_row, "Games", _safe_get(player_row, "Apps", "32"))
     goals   = _safe_get(player_row, "Goals", "3")
     assists = _safe_get(player_row, "Assists", "2")
-    xg_tot  = _safe_get(player_row, "Total xG", _safe_get(player_row, "xG", "—"))
-    xa_tot  = _safe_get(player_row, "Total xA", _safe_get(player_row, "xA", "—"))
-    height  = _safe_get(player_row, "Height", "174")
-    foot    = _safe_get(player_row, "Foot", "right")
 
     # ----- assemble sections from your existing calcs -----
     ATTACKING = []
@@ -1622,7 +1618,7 @@ else:
     header_h, gap_between     = 0.06, 0.020
 
     title_row_h     = 0.065   # Tableau Bold 22 look
-    sub_row_h       = 0.040   # Tableau Book 10 with many fields
+    sub_row_h       = 0.040   # Tableau Book 10 row
     header_block_h  = title_row_h + sub_row_h + 0.010
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
@@ -1646,7 +1642,7 @@ else:
         fontfamily=FONT_TITLE_FAMILY
     )
 
-    # draw bold label + normal value pairs with precise spacing
+    # info row: bold labels, normal values (Age, Games, Goals, Assists only)
     def draw_info_pairs():
         y = 1 - top_margin - title_row_h
         x = left_margin
@@ -1655,10 +1651,6 @@ else:
             ("Games: ",  games),
             ("Goals: ",  goals),
             ("Assists: ",assists),
-            ("xG: ",     xg_tot),
-            ("xA: ",     xa_tot),
-            ("Height: ", height),
-            ("Foot: ",   foot),
         ]
         sep = "  |  "
         renderer = fig.canvas.get_renderer()
@@ -1717,9 +1709,7 @@ else:
             s.set_visible(False)
         ax.tick_params(axis="x", bottom=False, labelbottom=False, length=0)
         ax.tick_params(axis="y", left=False,  labelleft=False,  length=0)
-        ax.set_yticks([])
-        ax.set_yticklabels([])
-        ax.get_yaxis().set_visible(False)
+        ax.set_yticks([]); ax.set_yticklabels([]); ax.get_yaxis().set_visible(False)
 
         # Tracks
         for i in range(n):
@@ -1730,7 +1720,7 @@ else:
         for gx in ticks:
             ax.vlines(gx, -0.5, n - 0.5, colors=(0, 0, 0, 0.16), linewidth=0.8, zorder=0.75)
 
-        # Bars + value labels (inside bar when possible)
+        # Bars + value labels (INSIDE-LEFT of bars; fallback just outside if too short)
         for i, (lab, pct, val_str) in enumerate(tuples[::-1]):  # top-first
             y = i
             bar_w = float(np.clip(pct, 0.0, 100.0))
@@ -1738,12 +1728,12 @@ else:
             ax.add_patch(plt.Rectangle((0, y - (BAR_FRAC / 2)), bar_w, BAR_FRAC,
                                        color=pct_to_rgb(bar_w), ec="none", zorder=1.0))
 
-            pad = 0.8  # data units
-            if bar_w >= 12:  # place inside-right
-                x_text = max(0.0, bar_w - pad)
-                ha = "right"
-            else:            # too short → just outside
-                x_text = min(100.0, bar_w + pad)
+            left_pad = 1.0  # data units; how far from the left edge inside the bar
+            if bar_w >= left_pad + 2:  # enough space to place text inside-left
+                x_text = left_pad
+                ha = "left"
+            else:
+                x_text = min(100.0, bar_w + 0.8)  # tiny bar → place just outside
                 ha = "left"
 
             ax.text(x_text, y, val_str,
@@ -1823,6 +1813,7 @@ else:
     )
     plt.close(fig)
 # ============================ END — Feature Z ============================
+
 
 
 
