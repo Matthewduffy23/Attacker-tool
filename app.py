@@ -1287,7 +1287,6 @@ else:
         ("Progressive Runs", "Progressive runs per 90"),
         ("Shots", "Shots per 90"),
         ("Shooting Accuracy %", "Shots on target, %"),
-        ("Successful Att. Actions", "Touches in box per 90"),
         ("Touches in Opposition Box", "Touches in box per 90"),
     ]:
         ATTACKING.append((lab, float(np.nan_to_num(pct_of(met), nan=0.0)), val_of(met)[1]))
@@ -1299,7 +1298,6 @@ else:
         ("Defensive Duels", "Defensive duels per 90"),
         ("Defensive Duel Success %", "Defensive duels won, %"),
         ("PAdj. Interceptions", "PAdj Interceptions"),
-        ("Successful Def. Actions", "Successful defensive actions per 90"),
     ]:
         DEFENSIVE.append((lab, float(np.nan_to_num(pct_of(met), nan=0.0)), val_of(met)[1]))
 
@@ -1316,11 +1314,9 @@ else:
         ("Passes", "Passes per 90"),
         ("Passing %", "Accurate passes, %"),
         ("Passes to F3rd", "Passes to final third per 90"),
-        ("Passes F3rd %", "Accurate passes to final third, %"),
-        ("Passes Pen-Area", "Passes to penalty area per 90"),
-        ("Pass Pen-Area %", "Accurate passes to penalty area, %"),
+        ("Passes to Pen-Area", "Passes to penalty area per 90"),
+        ("Passes to Pen Area %", "Accurate passes to penalty area, %"),
         ("Progessive Passes", "Progressive passes per 90"),
-        ("Prog Pass %", "Accurate progressive passes, %"),
         ("Progressive Runs", "Progressive runs per 90"),
         ("Smart Passes", "Smart passes per 90"),
     ]:
