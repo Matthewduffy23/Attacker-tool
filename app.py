@@ -1524,17 +1524,6 @@ def _font_name_or_fallback(pref_names, fallback="DejaVu Sans"):
             return n
     return fallback
 
-def _fmt_num(val, decimals=1):
-    """Format a value as a number with given decimals; pass-through if not numeric."""
-    try:
-        f = float(val)
-        # avoid trailing .0 if an integer value
-        if abs(f - round(f)) < 1e-9 and decimals >= 0:
-            return f"{int(round(f))}"
-        return f"{f:.{decimals}f}"
-    except Exception:
-        return str(val)
-
 # --- fonts (Tableau-like families + explicit hierarchy) ---
 FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold", "Tableau"])
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
@@ -1573,10 +1562,8 @@ else:
     minutes = _safe_get(player_row, "Minutes",
                _safe_get(player_row, "Minutes played", "—"))
 
-    # Goals / Assists
     goals   = _safe_get(player_row, "Goals", "—")
     assists = _safe_get(player_row, "Assists", "—")
-
     foot    = _safe_get(player_row, "Foot", _safe_get(player_row, "Preferred Foot", "—"))
 
     # ----- assemble sections -----
@@ -1692,8 +1679,8 @@ else:
             ("Age: ",      age),
             ("Games: ",    games),
             ("Minutes: ",  minutes),
-            ("Goals: ",    f"{goals} (xG: {xg})"),
-            ("Assists: ",  f"{assists} (xA: {xa})"),
+            ("Goals: ",    goals),
+            ("Assists: ",  assists),
             ("Foot: ",     foot),
         ]
         sep = "  |  "
@@ -1830,17 +1817,6 @@ else:
     )
     plt.close(fig)
 # ============================ END — Feature Z ============================
-
-
-
-
-
-
-
-
-
-
-
 
 
 
