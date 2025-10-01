@@ -1662,7 +1662,7 @@ else:
     # ===== HEADER (title + info share LEFT; title gets optical nudge) =====
     title_x = LEFT + TITLE_LEFT_NUDGE
     y_title_top = 1 - TOP - 0.006
-    fig.text(title_x, y_title_top, f"{name}\u200A|\u200A{team}",
+    fig.text(title_x, y_title_top, f"{name}\u2009|\u2009{team}",
              ha="left", va="top", color=TITLE_C, fontproperties=TITLE_FP)
 
     def draw_info_pairs():
