@@ -1499,6 +1499,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.transforms import ScaledTranslation
 from matplotlib import font_manager as fm
+from matplotlib.font_manager import FontProperties
 import streamlit as st
 
 st.markdown("---")
@@ -1527,18 +1528,26 @@ def _font_name_or_fallback(pref_names, fallback="DejaVu Sans"):
 FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold", "Tableau"])
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
 
+# Use FontProperties for proper weights
+TITLE_FP = FontProperties(family=FONT_TITLE_FAMILY, weight='bold', size=22)
+H2_FP    = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)
+LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='semibold', size=10)
+TEXT_FP  = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=10)
+TICK_FP  = FontProperties(family=FONT_BOOK_FAMILY,  weight='bold',     size=10)
+SMALL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=9)
+
 if player_row.empty:
     st.info("Pick a player above.")
 else:
-    # -------- header fields (fallbacks if missing) --------
+    # -------- header fields --------
     pos     = _safe_get(player_row, "Position", "CM/DM/RW")
     name    = _safe_get(player_row, "Player", _safe_get(player_row, "Name", "Kadeem Harris"))
     team    = _safe_get(player_row, "Team", "Carlisle United")
 
-    # Age rounded to one decimal
+    # Age rounded to 1 decimal
     age_raw = _safe_get(player_row, "Age", "31.0")
     try:
-        age = f"{float(age_raw):.1f}"
+        age = f"{float(age_raw):.0f}"
     except Exception:
         age = age_raw
 
@@ -1548,7 +1557,7 @@ else:
     assists = _safe_get(player_row, "Assists", "2")
     foot    = _safe_get(player_row, "Foot", _safe_get(player_row, "Preferred Foot", "—"))
 
-    # ----- assemble sections from your existing calcs -----
+    # ----- sections -----
     ATTACKING = []
     for lab, met in [
         ("Crosses", "Crosses per 90"),
@@ -1599,7 +1608,7 @@ else:
     sections = [("Attacking", ATTACKING), ("Defensive", DEFENSIVE), ("Possession", POSSESSION)]
     sections = [(t, lst) for t, lst in sections if lst]
 
-    # ----- styling (LIGHT theme) -----
+    # ----- styling -----
     PAGE_BG = "#ebebeb"
     AX_BG   = "#f3f3f3"
     TRACK   = "#d6d6d6"
@@ -1619,7 +1628,7 @@ else:
         v = float(np.clip(v, 0, 100))
         return _blend(TAB_RED, TAB_GOLD, v/50.0) if v <= 50 else _blend(TAB_GOLD, TAB_GREEN, (v-50.0)/50.0)
 
-    # ----- layout (with space for header) -----
+    # ----- layout -----
     total_rows = sum(len(lst) for _, lst in sections)
     fig = plt.figure(figsize=(10, 8), dpi=100)
     fig.patch.set_facecolor(PAGE_BG)
@@ -1628,15 +1637,15 @@ else:
     top_margin, bot_margin    = 0.035, 0.07
     header_h, gap_between     = 0.06, 0.020
 
-    title_row_h     = 0.065   # Tableau Bold 22 look
-    sub_row_h       = 0.040   # Tableau Book 10 row
+    title_row_h     = 0.065
+    sub_row_h       = 0.040
     header_block_h  = title_row_h + sub_row_h + 0.010
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
     BAR_FRAC = 0.85
 
-    # gutter probe (kept for alignment)
+    # gutter
     probe = fig.text(0, 0, "Successful Defensive Actions", fontsize=11, fontweight="bold", color=LABEL, alpha=0)
     fig.canvas.draw(); probe.remove()
     gutter = 0.215
@@ -1644,17 +1653,10 @@ else:
     ticks = np.arange(0, 101, 10)
     x_center_plot = (left_margin + gutter + (1 - right_margin)) / 2.0
 
-    # ----- header rows -----
-    # Top header: just "Name | Team"
-    fig.text(
-        left_margin, 1 - top_margin - 0.006,
-        f"| {name} | {team} |",
-        ha="left", va="top",
-        fontsize=22, fontweight=700, color=TITLE,
-        fontfamily=FONT_TITLE_FAMILY
-    )
+    # ----- header -----
+    fig.text(left_margin, 1 - top_margin - 0.006, f"| {name} | {team} |",
+             ha="left", va="top", color=TITLE, fontproperties=TITLE_FP)
 
-    # Info row: Position, Age, Games, Minutes, Goals, Assists, Foot
     def draw_info_pairs():
         y = 1 - top_margin - title_row_h
         x = left_margin
@@ -1670,28 +1672,21 @@ else:
         sep = "  |  "
         renderer = fig.canvas.get_renderer()
         for i, (lab, val) in enumerate(pairs):
-            t1 = fig.text(x, y, lab, ha="left", va="top",
-                          fontsize=10, fontweight=600, color=LABEL,
-                          fontfamily=FONT_BOOK_FAMILY)
+            t1 = fig.text(x, y, lab, ha="left", va="top", color=LABEL, fontproperties=LABEL_FP)
             fig.canvas.draw(); bb1 = t1.get_window_extent(renderer=renderer)
             x += (bb1.width / fig.bbox.width)
 
-            t2 = fig.text(x, y, str(val), ha="left", va="top",
-                          fontsize=10, fontweight=400, color=LABEL,
-                          fontfamily=FONT_BOOK_FAMILY)
+            t2 = fig.text(x, y, str(val), ha="left", va="top", color=LABEL, fontproperties=TEXT_FP)
             fig.canvas.draw(); bb2 = t2.get_window_extent(renderer=renderer)
             x += (bb2.width / fig.bbox.width)
 
             if i != len(pairs) - 1:
-                t3 = fig.text(x, y, sep, ha="left", va="top",
-                              fontsize=10, fontweight=400, color="#555555",
-                              fontfamily=FONT_BOOK_FAMILY)
+                t3 = fig.text(x, y, sep, ha="left", va="top", color="#555555", fontproperties=TEXT_FP)
                 fig.canvas.draw(); bb3 = t3.get_window_extent(renderer=renderer)
                 x += (bb3.width / fig.bbox.width)
 
     draw_info_pairs()
 
-    # thin divider under header
     fig.lines.append(plt.Line2D(
         [left_margin, 1 - right_margin],
         [1 - top_margin - header_block_h + 0.004] * 2,
@@ -1702,12 +1697,8 @@ else:
         n = len(tuples)
         panel_h = header_h + n * row_slot
 
-        fig.text(
-            left_margin, panel_top - 0.012, title,
-            ha="left", va="top",
-            fontsize=20, fontweight=600,
-            color=TITLE, fontfamily=FONT_TITLE_FAMILY
-        )
+        fig.text(left_margin, panel_top - 0.012, title,
+                 ha="left", va="top", color=TITLE, fontproperties=H2_FP)
 
         ax = fig.add_axes([
             left_margin + gutter,
@@ -1719,55 +1710,35 @@ else:
         ax.set_xlim(0, 100)
         ax.set_ylim(-0.5, n - 0.5)
 
-        # Hide spines and ALL ticks/labels (prevents stray 10.0 / 7.5 etc.)
         for s in ax.spines.values():
             s.set_visible(False)
         ax.tick_params(axis="x", bottom=False, labelbottom=False, length=0)
         ax.tick_params(axis="y", left=False,  labelleft=False,  length=0)
-        ax.set_yticks([]); ax.set_yticklabels([]); ax.get_yaxis().set_visible(False)
+        ax.set_yticks([]); ax.get_yaxis().set_visible(False)
 
-        # Tracks
         for i in range(n):
-            ax.add_patch(plt.Rectangle((0, i - (BAR_FRAC/2)), 100, BAR_FRAC,
-                                       color=TRACK, ec="none", zorder=0.5))
+            ax.add_patch(plt.Rectangle((0, i - (BAR_FRAC/2)), 100, BAR_FRAC, color=TRACK, ec="none", zorder=0.5))
 
-        # Vertical gridlines
         for gx in ticks:
             ax.vlines(gx, -0.5, n - 0.5, colors=(0, 0, 0, 0.16), linewidth=0.8, zorder=0.75)
 
-        # Bars + value labels (INSIDE-LEFT of bars; fallback just outside if too short)
-        for i, (lab, pct, val_str) in enumerate(tuples[::-1]):  # top-first
+        for i, (lab, pct, val_str) in enumerate(tuples[::-1]):
             y = i
             bar_w = float(np.clip(pct, 0.0, 100.0))
+            ax.add_patch(plt.Rectangle((0, y - (BAR_FRAC / 2)), bar_w, BAR_FRAC, color=pct_to_rgb(bar_w), ec="none", zorder=1.0))
 
-            ax.add_patch(plt.Rectangle((0, y - (BAR_FRAC / 2)), bar_w, BAR_FRAC,
-                                       color=pct_to_rgb(bar_w), ec="none", zorder=1.0))
+            left_pad = 1.0
+            x_text = left_pad if bar_w >= left_pad + 2 else min(100.0, bar_w + 0.8)
+            ax.text(x_text, y, val_str, ha="left", va="center", color="#0B0B0B",
+                    fontproperties=SMALL_FP, zorder=2.0, clip_on=False)
 
-            left_pad = 1.0  # data units; how far from the left edge inside the bar
-            if bar_w >= left_pad + 2:  # enough space to place text inside-left
-                x_text = left_pad
-                ha = "left"
-            else:
-                x_text = min(100.0, bar_w + 0.8)  # tiny bar → place just outside
-                ha = "left"
-
-            ax.text(x_text, y, val_str,
-                    ha=ha, va="center",
-                    fontsize=8, fontweight=400, color="#0B0B0B",
-                    zorder=2.0, clip_on=False)
-
-        # 50% reference
         ax.axvline(50, color="#000000", ls=(0, (4, 4)), lw=1.5, alpha=0.7, zorder=3.5)
 
-        # Metric labels in left gutter (figure coords to keep alignment) — semibold
+        # Metric labels — semibold
         for i, (lab, _, _) in enumerate(tuples[::-1]):
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
-            fig.text(left_margin, y_fig, lab,
-                     ha="left", va="center",
-                     fontsize=10, fontweight=550,
-                     color=LABEL, fontfamily=FONT_BOOK_FAMILY)
+            fig.text(left_margin, y_fig, lab, ha="left", va="center", color=LABEL, fontproperties=LABEL_FP)
 
-        # Bottom ticks on the last panel
         if show_xticks:
             trans = ax.get_xaxis_transform()
             INNER_PCT_OFFSET_PT, EDGE_0, EDGE_100 = 7, 4, 10
@@ -1777,28 +1748,19 @@ else:
             y_label = -0.075
 
             for gx in ticks:
-                ax.plot([gx, gx], [-0.03, 0.0], transform=trans,
-                        color=(0, 0, 0, 0.6), lw=1.1, clip_on=False, zorder=4)
-                ax.text(gx, y_label, f"{int(gx)}", transform=trans,
-                        ha="center", va="top", fontsize=10, fontweight=600,
-                        color="#000000", zorder=4, clip_on=False)
+                ax.plot([gx, gx], [-0.03, 0.0], transform=trans, color=(0, 0, 0, 0.6), lw=1.1, clip_on=False, zorder=4)
+                ax.text(gx, y_label, f"{int(gx)}", transform=trans, ha="center", va="top",
+                        color="#000000", fontproperties=TICK_FP, zorder=4, clip_on=False)
                 if gx == 0:
-                    ax.text(gx, y_label, "%", transform=trans + offset_pct_0,
-                            ha="left", va="top", fontsize=10, fontweight=600, color="#000000")
+                    ax.text(gx, y_label, "%", transform=trans + offset_pct_0, ha="left", va="top", color="#000000", fontproperties=TICK_FP)
                 elif gx == 100:
-                    ax.text(gx, y_label, "%", transform=trans + offset_pct_100,
-                            ha="left", va="top", fontsize=10, fontweight=600, color="#000000")
+                    ax.text(gx, y_label, "%", transform=trans + offset_pct_100, ha="left", va="top", color="#000000", fontproperties=TICK_FP)
                 else:
-                    ax.text(gx, y_label, "%", transform=trans + offset_inner,
-                            ha="left", va="top", fontsize=10, fontweight=600, color="#000000")
+                    ax.text(gx, y_label, "%", transform=trans + offset_inner, ha="left", va="top", color="#000000", fontproperties=TICK_FP)
 
-        # Section divider
         if draw_bottom_divider:
             y0 = panel_top - panel_h - 0.008
-            fig.lines.append(plt.Line2D(
-                [left_margin, 1 - right_margin], [y0, y0],
-                transform=fig.transFigure, color=DIVIDER, lw=1.2, alpha=0.35
-            ))
+            fig.lines.append(plt.Line2D([left_margin, 1 - right_margin], [y0, y0], transform=fig.transFigure, color=DIVIDER, lw=1.2, alpha=0.35))
 
         return panel_top - panel_h - gap_between
 
@@ -1808,14 +1770,11 @@ else:
         is_last = (idx == len(sections) - 1)
         y_top = draw_panel(y_top, title, data, show_xticks=is_last, draw_bottom_divider=not is_last)
 
-    # Footer caption (regular weight to match Tableau feel)
     fig.text(x_center_plot, bot_margin * 0.1, "Percentile Rank",
-             ha="center", va="center", fontsize=9, fontweight=400,
-             color=LABEL, fontfamily=FONT_BOOK_FAMILY)
+             ha="center", va="center", color=LABEL, fontproperties=SMALL_FP)
 
     st.pyplot(fig, use_container_width=True)
 
-    # Download (unique key prevents duplicate-id error)
     buf = BytesIO()
     fig.savefig(buf, format="png", dpi=130, bbox_inches="tight", facecolor=fig.get_facecolor())
     buf.seek(0)
