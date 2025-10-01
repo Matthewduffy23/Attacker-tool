@@ -1639,7 +1639,7 @@ else:
     fig = plt.figure(figsize=(10, 8), dpi=100)
     fig.patch.set_facecolor(PAGE_BG)
 
-    left_margin, right_margin = 0.025, 0.020
+    left_margin, right_margin = 0.035, 0.020
     top_margin, bot_margin    = 0.035, 0.07
     header_h, gap_between     = 0.06, 0.020
 
@@ -1663,7 +1663,8 @@ else:
     # Title on one line with thin spaces around the pipe
     y_title_top = 1 - top_margin - 0.006
     fig.text(
-        left_margin, y_title_top,
+        left_margin + 0.01,  # 👈 increase this to move the title right (~1% of figure width) 
+        y_title_top,
         f"{name}\u2009|\u2009{team}",
         ha="left", va="top",
         color=TITLE_C, fontproperties=TITLE_FP
