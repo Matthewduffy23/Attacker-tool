@@ -1524,19 +1524,19 @@ def _font_name_or_fallback(pref_names, fallback="DejaVu Sans"):
             return n
     return fallback
 
-# --- fonts ---
+# --- fonts (Tableau-like families + explicit hierarchy) ---
 FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold", "Tableau"])
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
 
 TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=22)  # Player Name | Team
-H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)  # Attacking/Defensive/Possession
-LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='medium',   size=10)  # Metric names (left gutter)
+H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)  # Section titles
+LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='medium',   size=10)  # Metric labels (left gutter)
 
 INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',     size=10)  # "Age:"
 INFO_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular',  size=10)  # "31"
 
 BAR_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular',   size=8)   # numbers inside bars
-TICK_FP      = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',    size=10)  # 0..100 along bottom
+TICK_FP      = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',    size=10)  # bottom tick numbers
 FOOTER_FP    = FontProperties(family=FONT_BOOK_FAMILY, weight='semibold',  size=10)  # "Percentile Rank"
 
 if player_row.empty:
@@ -1547,9 +1547,10 @@ else:
     name    = _safe_get(player_row, "Player", _safe_get(player_row, "Name", "Kadeem Harris"))
     team    = _safe_get(player_row, "Team", "Carlisle United")
 
+    # Age as whole number
     age_raw = _safe_get(player_row, "Age", "31.0")
     try:
-        age = f"{float(age_raw):.0f}"   # whole number
+        age = f"{float(age_raw):.0f}"
     except Exception:
         age = age_raw
 
@@ -1559,7 +1560,7 @@ else:
     assists = _safe_get(player_row, "Assists", "2")
     foot    = _safe_get(player_row, "Foot", _safe_get(player_row, "Preferred Foot", "—"))
 
-    # ----- sections (your metrics) -----
+    # ----- assemble sections -----
     ATTACKING = []
     for lab, met in [
         ("Crosses", "Crosses per 90"),
@@ -1630,10 +1631,13 @@ else:
         v = float(np.clip(v, 0, 100))
         return _blend(TAB_RED, TAB_GOLD, v/50.0) if v <= 50 else _blend(TAB_GOLD, TAB_GREEN, (v-50.0)/50.0)
 
-    # ----- layout (unified left padding for EVERYTHING) -----
-    GLOBAL_LEFT_PAD = 0.02          # 2% extra left padding; change to 0.20 if you truly want 20%
+    # ----- layout (unified left alignment) -----
+    GLOBAL_LEFT_PAD = 0.02           # 2% extra left padding for EVERYTHING
     BASE_LEFT, RIGHT = 0.035, 0.020
-    LEFT = BASE_LEFT + GLOBAL_LEFT_PAD   # <- single source of truth used everywhere
+    LEFT = BASE_LEFT + GLOBAL_LEFT_PAD
+
+    # Optical nudge ONLY for the bold title (compensates font side-bearing)
+    TITLE_LEFT_NUDGE = 0.004         # tweak 0.003–0.006 as needed
 
     TOP, BOT = 0.035, 0.07
     header_h, GAP = 0.06, 0.020
@@ -1649,21 +1653,21 @@ else:
     row_slot = rows_space_total / max(total_rows, 1)
     BAR_FRAC = 0.85
 
-    # Width reserved for metric labels before bars begin (keeps readability)
+    # Width reserved for metric labels before bars begin
     gutter = 0.215
 
     ticks = np.arange(0, 101, 10)
     x_center_plot = (LEFT + gutter + (1 - RIGHT)) / 2.0
 
-    # ===== HEADER (title + info share the same LEFT) =====
-    title_x = LEFT
+    # ===== HEADER (title + info share LEFT; title gets optical nudge) =====
+    title_x = LEFT + TITLE_LEFT_NUDGE
     y_title_top = 1 - TOP - 0.006
     fig.text(title_x, y_title_top, f"{name}\u2009|\u2009{team}",
              ha="left", va="top", color=TITLE_C, fontproperties=TITLE_FP)
 
     def draw_info_pairs():
         y = 1 - TOP - title_row_h + 0.010
-        x = title_x
+        x = LEFT  # exact left alignment baseline (no nudge)
         pairs = [
             ("Position: ", pos),
             ("Age: ",      age),
@@ -1690,17 +1694,17 @@ else:
                 x += (bb3.width / fig.bbox.width)
     draw_info_pairs()
 
-    # divider under header (uses LEFT)
+    # Divider under header
     fig.lines.append(plt.Line2D([LEFT, 1 - RIGHT],
                                 [1 - TOP - header_block_h + 0.004]*2,
                                 transform=fig.transFigure, color=DIVIDER, lw=0.8, alpha=0.35))
 
-    # ===== PANELS (section titles, metric labels, bars all respect LEFT) =====
+    # ===== PANELS (everything aligned to LEFT) =====
     def draw_panel(panel_top, title, tuples, *, show_xticks=False, draw_bottom_divider=True):
         n = len(tuples)
         panel_h = header_h + n * row_slot
 
-        # Section title aligned to LEFT
+        # Section title aligned to LEFT baseline
         fig.text(LEFT, panel_top - 0.012, title,
                  ha="left", va="top", color=TITLE_C, fontproperties=H2_FP)
 
@@ -1739,7 +1743,7 @@ else:
             ax.text(x_text, y, val_str, ha="left", va="center",
                     color="#0B0B0B", fontproperties=BAR_VALUE_FP, zorder=2.0, clip_on=False)
 
-        # 50% reference line
+        # 50% reference
         ax.axvline(50, color="#000000", ls=(0, (4, 4)), lw=1.5, alpha=0.7, zorder=3.5)
 
         # Metric labels aligned to LEFT (figure coords)
@@ -1773,7 +1777,7 @@ else:
                     ax.text(gx, y_label, "%", transform=trans + offset_inner,
                             ha="left", va="top", color="#000000", fontproperties=TICK_FP)
 
-        # Divider under section
+        # Section divider
         if draw_bottom_divider:
             y0 = panel_top - panel_h - 0.008
             fig.lines.append(plt.Line2D([LEFT, 1 - RIGHT], [y0, y0],
