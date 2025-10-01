@@ -1635,10 +1635,10 @@ else:
 
     # ----- header rows -----
     fig.text(
-        left_margin, 1 - top_margin - 0.004,
+        left_margin, 1 - top_margin - 0.006,
         f"| {pos} | {name} | {team} |",
         ha="left", va="top",
-        fontsize=22, fontweight="600", color=TITLE,
+        fontsize=22, fontweight="500", color=TITLE,
         fontfamily=FONT_TITLE_FAMILY
     )
 
@@ -1749,7 +1749,7 @@ else:
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
             fig.text(left_margin, y_fig, lab,
                      ha="left", va="center",
-                     fontsize=10, fontweight="medium",
+                     fontsize=10, fontweight="semibold",
                      color=LABEL, fontfamily=FONT_BOOK_FAMILY)
 
         # Bottom ticks on the last panel
