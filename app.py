@@ -1531,7 +1531,7 @@ FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tab
 # Headline + section + labels
 TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=22)  # title tuned down
 H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)  # section titles
-LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='semibold', size=10)  # metric labels (left gutter)
+LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='medium', size=10)  # metric labels (left gutter)
 
 # Info row (independent from metric labels)
 INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)   # "Age:", "Games:"...
@@ -1644,7 +1644,7 @@ else:
 
     # Single-line title → add a bit more headroom to prevent crowding
     title_row_h     = 0.075         # increased from 0.065
-    header_block_h  = title_row_h + 0.020  # extra breathing room
+    header_block_h  = title_row_h + 0.02  # extra breathing room
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
