@@ -1764,7 +1764,7 @@ else:
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
             fig.text(left_margin, y_fig, lab,
                      ha="left", va="center",
-                     fontsize=10, fontweight=600,
+                     fontsize=10, fontweight=550,
                      color=LABEL, fontfamily=FONT_BOOK_FAMILY)
 
         # Bottom ticks on the last panel
@@ -1780,17 +1780,17 @@ else:
                 ax.plot([gx, gx], [-0.03, 0.0], transform=trans,
                         color=(0, 0, 0, 0.6), lw=1.1, clip_on=False, zorder=4)
                 ax.text(gx, y_label, f"{int(gx)}", transform=trans,
-                        ha="center", va="top", fontsize=10, fontweight=700,
+                        ha="center", va="top", fontsize=10, fontweight=600,
                         color="#000000", zorder=4, clip_on=False)
                 if gx == 0:
                     ax.text(gx, y_label, "%", transform=trans + offset_pct_0,
-                            ha="left", va="top", fontsize=10, fontweight=700, color="#000000")
+                            ha="left", va="top", fontsize=10, fontweight=600, color="#000000")
                 elif gx == 100:
                     ax.text(gx, y_label, "%", transform=trans + offset_pct_100,
-                            ha="left", va="top", fontsize=10, fontweight=700, color="#000000")
+                            ha="left", va="top", fontsize=10, fontweight=600, color="#000000")
                 else:
                     ax.text(gx, y_label, "%", transform=trans + offset_inner,
-                            ha="left", va="top", fontsize=10, fontweight=700, color="#000000")
+                            ha="left", va="top", fontsize=10, fontweight=600, color="#000000")
 
         # Section divider
         if draw_bottom_divider:
