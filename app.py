@@ -1573,13 +1573,9 @@ else:
     minutes = _safe_get(player_row, "Minutes",
                _safe_get(player_row, "Minutes played", "—"))
 
-    # Goals / Assists, and show xG / xA beside them
+    # Goals / Assists
     goals   = _safe_get(player_row, "Goals", "—")
     assists = _safe_get(player_row, "Assists", "—")
-    xg_raw  = _safe_get(player_row, "xG", "—")
-    xa_raw  = _safe_get(player_row, "xA", "—")
-    xg = _fmt_num(xg_raw, 1) if xg_raw != "—" else xg_raw
-    xa = _fmt_num(xa_raw, 1) if xa_raw != "—" else xa_raw
 
     foot    = _safe_get(player_row, "Foot", _safe_get(player_row, "Preferred Foot", "—"))
 
