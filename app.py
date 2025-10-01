@@ -1632,12 +1632,12 @@ else:
         return _blend(TAB_RED, TAB_GOLD, v/50.0) if v <= 50 else _blend(TAB_GOLD, TAB_GREEN, (v-50.0)/50.0)
 
     # ----- layout (unified left alignment) -----
-    GLOBAL_LEFT_PAD = 0.03          # 2% extra left padding for EVERYTHING
+    GLOBAL_LEFT_PAD = 0.02         # 2% extra left padding for EVERYTHING
     BASE_LEFT, RIGHT = 0.035, 0.020
     LEFT = BASE_LEFT + GLOBAL_LEFT_PAD
 
     # Optical nudge ONLY for the bold title (compensates font side-bearing)
-    TITLE_LEFT_NUDGE = 0.00       # tweak 0.003–0.006 as needed
+    TITLE_LEFT_NUDGE = - 0.001      # tweak 0.003–0.006 as needed
 
     TOP, BOT = 0.035, 0.07
     header_h, GAP = 0.06, 0.020
