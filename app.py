@@ -1529,17 +1529,18 @@ FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold",
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
 
 # Headline + section + labels
-TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=22)  # title tuned down
+TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=22)  # single-line title
 H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)  # section titles
-LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='medium', size=10)  # metric labels (left gutter)
+LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='semibold', size=10)  # metric labels (left gutter)
 
 # Info row (independent from metric labels)
 INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)   # "Age:", "Games:"...
 INFO_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=10)   # "31", "2548"...
 
-# Ticks / small text
-TICK_FP   = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',    size=10)
-SMALL_FP  = FontProperties(family=FONT_BOOK_FAMILY, weight='medium', size=10)
+# Values, ticks, footer — all independent now
+BAR_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=9)     # values inside bars
+TICK_FP      = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)    # numbers along bottom axis
+FOOTER_FP    = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',  size=10)    # "Percentile Rank" label
 
 if player_row.empty:
     st.info("Pick a player above.")
@@ -1642,9 +1643,9 @@ else:
     top_margin, bot_margin    = 0.035, 0.07
     header_h, gap_between     = 0.06, 0.020
 
-    # Single-line title → add a bit more headroom to prevent crowding
-    title_row_h     = 0.075         # increased from 0.065
-    header_block_h  = title_row_h + 0.00  # extra breathing room
+    # Single-line title with extra headroom to prevent crowding
+    title_row_h     = 0.075
+    header_block_h  = title_row_h + 0.020
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
@@ -1668,9 +1669,9 @@ else:
         color=TITLE_C, fontproperties=TITLE_FP
     )
 
-    # Info row — lower slightly to avoid crowding the title
+    # Info row — nudged down a touch
     def draw_info_pairs():
-        y = 1 - top_margin - title_row_h + 0.010   # nudged down by +0.01
+        y = 1 - top_margin - title_row_h + 0.010
         x = left_margin
         pairs = [
             ("Position: ", pos),
@@ -1739,7 +1740,7 @@ else:
         for gx in ticks:
             ax.vlines(gx, -0.5, n - 0.5, colors=(0, 0, 0, 0.16), linewidth=0.8, zorder=0.75)
 
-        # Bars + value labels
+        # Bars + value labels (use BAR_VALUE_FP so it's independent of ticks/footer)
         for i, (lab, pct, val_str) in enumerate(tuples[::-1]):  # top-first
             y = i
             bar_w = float(np.clip(pct, 0.0, 100.0))
@@ -1750,7 +1751,7 @@ else:
             x_text = left_pad if bar_w >= left_pad + 2 else min(100.0, bar_w + 0.8)
             ax.text(x_text, y, val_str,
                     ha="left", va="center",
-                    color="#0B0B0B", fontproperties=SMALL_FP,
+                    color="#0B0B0B", fontproperties=BAR_VALUE_FP,
                     zorder=2.0, clip_on=False)
 
         # 50% reference
@@ -1763,7 +1764,7 @@ else:
                      ha="left", va="center",
                      color=LABEL_C, fontproperties=LABEL_FP)
 
-        # Bottom ticks on the last panel
+        # Bottom ticks on the last panel (uses TICK_FP, independent from BAR_VALUE_FP)
         if show_xticks:
             trans = ax.get_xaxis_transform()
             INNER_PCT_OFFSET_PT, EDGE_0, EDGE_100 = 7, 4, 10
@@ -1804,9 +1805,9 @@ else:
         is_last = (idx == len(sections) - 1)
         y_top = draw_panel(y_top, title, data, show_xticks=is_last, draw_bottom_divider=not is_last)
 
-    # Footer caption
+    # Footer caption (now independent and set to size 10 Medium)
     fig.text(x_center_plot, bot_margin * 0.1, "Percentile Rank",
-             ha="center", va="center", color=LABEL_C, fontproperties=SMALL_FP)
+             ha="center", va="center", color=LABEL_C, fontproperties=FOOTER_FP)
 
     st.pyplot(fig, use_container_width=True)
 
@@ -1823,6 +1824,7 @@ else:
     )
     plt.close(fig)
 # ============================ END — Feature Z ============================
+
 
 
 
