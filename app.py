@@ -1663,7 +1663,7 @@ else:
     # Title on one line with thin spaces around the pipe
     y_title_top = 1 - top_margin - 0.006
     fig.text(
-        left_margin + 0.01,  # 👈 increase this to move the title right (~1% of figure width) 
+        left_margin - 0.03,  # 👈 increase this to move the title right (~1% of figure width) 
         y_title_top,
         f"{name}\u2009|\u2009{team}",
         ha="left", va="top",
