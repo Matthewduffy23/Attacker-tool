@@ -1499,6 +1499,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.transforms import ScaledTranslation
 from matplotlib import font_manager as fm
+import streamlit as st
 
 st.markdown("---")
 st.header("📋 Feature Z — White Percentile Board")
@@ -1522,6 +1523,7 @@ def _font_name_or_fallback(pref_names, fallback="DejaVu Sans"):
             return n
     return fallback
 
+# --- fonts (Tableau-like) ---
 FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold", "Tableau"])
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
 
@@ -1532,10 +1534,19 @@ else:
     pos     = _safe_get(player_row, "Position", "CM/DM/RW")
     name    = _safe_get(player_row, "Player", _safe_get(player_row, "Name", "Kadeem Harris"))
     team    = _safe_get(player_row, "Team", "Carlisle United")
-    age     = _safe_get(player_row, "Age", "31.0")
+
+    # Age rounded to one decimal
+    age_raw = _safe_get(player_row, "Age", "31.0")
+    try:
+        age = f"{float(age_raw):.1f}"
+    except Exception:
+        age = age_raw
+
     games   = _safe_get(player_row, "Games", _safe_get(player_row, "Apps", "32"))
+    minutes = _safe_get(player_row, "Minutes", _safe_get(player_row, "Minutes played", "—"))
     goals   = _safe_get(player_row, "Goals", "3")
     assists = _safe_get(player_row, "Assists", "2")
+    foot    = _safe_get(player_row, "Foot", _safe_get(player_row, "Preferred Foot", "—"))
 
     # ----- assemble sections from your existing calcs -----
     ATTACKING = []
@@ -1579,7 +1590,7 @@ else:
         ("Passes to Final 3rd", "Passes to final third per 90"),
         ("Passes to Penalty Area", "Passes to penalty area per 90"),
         ("Passes to Penalty Area %", "Accurate passes to penalty area, %"),
-        ("Progessive Passes", "Progressive passes per 90"),
+        ("Progressive Passes", "Progressive passes per 90"),
         ("Progressive Runs", "Progressive runs per 90"),
         ("Smart Passes", "Smart passes per 90"),
     ]:
@@ -1634,42 +1645,46 @@ else:
     x_center_plot = (left_margin + gutter + (1 - right_margin)) / 2.0
 
     # ----- header rows -----
+    # Top header: just "Name | Team"
     fig.text(
         left_margin, 1 - top_margin - 0.006,
-        f"| {pos} | {name} | {team} |",
+        f"| {name} | {team} |",
         ha="left", va="top",
-        fontsize=22, fontweight="500", color=TITLE,
+        fontsize=22, fontweight=700, color=TITLE,
         fontfamily=FONT_TITLE_FAMILY
     )
 
-    # info row: bold labels, normal values (Age, Games, Goals, Assists only)
+    # Info row: Position, Age, Games, Minutes, Goals, Assists, Foot
     def draw_info_pairs():
         y = 1 - top_margin - title_row_h
         x = left_margin
         pairs = [
-            ("Age: ",    age),
-            ("Games: ",  games),
-            ("Goals: ",  goals),
-            ("Assists: ",assists),
+            ("Position: ", pos),
+            ("Age: ",      age),
+            ("Games: ",    games),
+            ("Minutes: ",  minutes),
+            ("Goals: ",    goals),
+            ("Assists: ",  assists),
+            ("Foot: ",     foot),
         ]
         sep = "  |  "
         renderer = fig.canvas.get_renderer()
         for i, (lab, val) in enumerate(pairs):
             t1 = fig.text(x, y, lab, ha="left", va="top",
-                          fontsize=10, fontweight="600", color=LABEL,
+                          fontsize=10, fontweight=600, color=LABEL,
                           fontfamily=FONT_BOOK_FAMILY)
             fig.canvas.draw(); bb1 = t1.get_window_extent(renderer=renderer)
             x += (bb1.width / fig.bbox.width)
 
             t2 = fig.text(x, y, str(val), ha="left", va="top",
-                          fontsize=10, fontweight="400", color=LABEL,
+                          fontsize=10, fontweight=400, color=LABEL,
                           fontfamily=FONT_BOOK_FAMILY)
             fig.canvas.draw(); bb2 = t2.get_window_extent(renderer=renderer)
             x += (bb2.width / fig.bbox.width)
 
             if i != len(pairs) - 1:
                 t3 = fig.text(x, y, sep, ha="left", va="top",
-                              fontsize=10, fontweight="400", color="#555555",
+                              fontsize=10, fontweight=400, color="#555555",
                               fontfamily=FONT_BOOK_FAMILY)
                 fig.canvas.draw(); bb3 = t3.get_window_extent(renderer=renderer)
                 x += (bb3.width / fig.bbox.width)
@@ -1690,7 +1705,7 @@ else:
         fig.text(
             left_margin, panel_top - 0.012, title,
             ha="left", va="top",
-            fontsize=20, fontweight="600",
+            fontsize=20, fontweight=600,
             color=TITLE, fontfamily=FONT_TITLE_FAMILY
         )
 
@@ -1738,18 +1753,18 @@ else:
 
             ax.text(x_text, y, val_str,
                     ha=ha, va="center",
-                    fontsize=8, fontweight="400", color="#0B0B0B",
+                    fontsize=8, fontweight=400, color="#0B0B0B",
                     zorder=2.0, clip_on=False)
 
         # 50% reference
         ax.axvline(50, color="#000000", ls=(0, (4, 4)), lw=1.5, alpha=0.7, zorder=3.5)
 
-        # Metric labels in left gutter (figure coords to keep alignment)
+        # Metric labels in left gutter (figure coords to keep alignment) — semibold
         for i, (lab, _, _) in enumerate(tuples[::-1]):
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
             fig.text(left_margin, y_fig, lab,
                      ha="left", va="center",
-                     fontsize=10, fontweight="semibold",
+                     fontsize=10, fontweight=600,
                      color=LABEL, fontfamily=FONT_BOOK_FAMILY)
 
         # Bottom ticks on the last panel
@@ -1765,17 +1780,17 @@ else:
                 ax.plot([gx, gx], [-0.03, 0.0], transform=trans,
                         color=(0, 0, 0, 0.6), lw=1.1, clip_on=False, zorder=4)
                 ax.text(gx, y_label, f"{int(gx)}", transform=trans,
-                        ha="center", va="top", fontsize=10, fontweight="700",
+                        ha="center", va="top", fontsize=10, fontweight=700,
                         color="#000000", zorder=4, clip_on=False)
                 if gx == 0:
                     ax.text(gx, y_label, "%", transform=trans + offset_pct_0,
-                            ha="left", va="top", fontsize=10, fontweight="700", color="#000000")
+                            ha="left", va="top", fontsize=10, fontweight=700, color="#000000")
                 elif gx == 100:
                     ax.text(gx, y_label, "%", transform=trans + offset_pct_100,
-                            ha="left", va="top", fontsize=10, fontweight="700", color="#000000")
+                            ha="left", va="top", fontsize=10, fontweight=700, color="#000000")
                 else:
                     ax.text(gx, y_label, "%", transform=trans + offset_inner,
-                            ha="left", va="top", fontsize=10, fontweight="700", color="#000000")
+                            ha="left", va="top", fontsize=10, fontweight=700, color="#000000")
 
         # Section divider
         if draw_bottom_divider:
@@ -1793,9 +1808,9 @@ else:
         is_last = (idx == len(sections) - 1)
         y_top = draw_panel(y_top, title, data, show_xticks=is_last, draw_bottom_divider=not is_last)
 
-    # Footer caption
+    # Footer caption (regular weight to match Tableau feel)
     fig.text(x_center_plot, bot_margin * 0.1, "Percentile Rank",
-             ha="center", va="center", fontsize=9, fontweight="bold",
+             ha="center", va="center", fontsize=9, fontweight=400,
              color=LABEL, fontfamily=FONT_BOOK_FAMILY)
 
     st.pyplot(fig, use_container_width=True)
@@ -1807,12 +1822,13 @@ else:
     st.download_button(
         "⬇️ Download Feature Z (PNG)",
         data=buf.getvalue(),
-        file_name=f"{str(player_name).replace(' ','_')}_featureZ.png",
+        file_name=f"{str(name).replace(' ','_')}_featureZ.png",
         mime="image/png",
         key=f"download_feature_z_{uuid.uuid4().hex}"
     )
     plt.close(fig)
 # ============================ END — Feature Z ============================
+
 
 
 
