@@ -1690,7 +1690,7 @@ else:
         fig.text(
             left_margin, panel_top - 0.012, title,
             ha="left", va="top",
-            fontsize=20, fontweight="800",
+            fontsize=20, fontweight="600",
             color=TITLE, fontfamily=FONT_TITLE_FAMILY
         )
 
@@ -1749,7 +1749,7 @@ else:
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
             fig.text(left_margin, y_fig, lab,
                      ha="left", va="center",
-                     fontsize=10, fontweight="semibold",
+                     fontsize=10, fontweight="medium",
                      color=LABEL, fontfamily=FONT_BOOK_FAMILY)
 
         # Bottom ticks on the last panel
