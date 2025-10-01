@@ -1637,7 +1637,7 @@ else:
     LEFT = BASE_LEFT + GLOBAL_LEFT_PAD
 
     # Optical nudge ONLY for the bold title (compensates font side-bearing)
-    TITLE_LEFT_NUDGE = 0.003         # tweak 0.003–0.006 as needed
+    TITLE_LEFT_NUDGE = - 0.01         # tweak 0.003–0.006 as needed
 
     TOP, BOT = 0.035, 0.07
     header_h, GAP = 0.06, 0.020
