@@ -1501,7 +1501,7 @@ from matplotlib.transforms import ScaledTranslation
 from matplotlib import font_manager as fm
 
 st.markdown("---")
-st.header("📋 Feature Z — White Percentile Board (uniform rows)")
+st.header("📋 Feature Z — White Percentile Board")
 
 # ---------- helpers ----------
 def _safe_get(df_or_series, key, default="—"):
@@ -1635,10 +1635,10 @@ else:
 
     # ----- header rows -----
     fig.text(
-        left_margin, 1 - top_margin - 0.002,
+        left_margin, 1 - top_margin - 0.004,
         f"| {pos} | {name} | {team} |",
         ha="left", va="top",
-        fontsize=22, fontweight="650", color=TITLE,
+        fontsize=22, fontweight="600", color=TITLE,
         fontfamily=FONT_TITLE_FAMILY
     )
 
@@ -1656,7 +1656,7 @@ else:
         renderer = fig.canvas.get_renderer()
         for i, (lab, val) in enumerate(pairs):
             t1 = fig.text(x, y, lab, ha="left", va="top",
-                          fontsize=10, fontweight="700", color=LABEL,
+                          fontsize=10, fontweight="600", color=LABEL,
                           fontfamily=FONT_BOOK_FAMILY)
             fig.canvas.draw(); bb1 = t1.get_window_extent(renderer=renderer)
             x += (bb1.width / fig.bbox.width)
@@ -1690,7 +1690,7 @@ else:
         fig.text(
             left_margin, panel_top - 0.012, title,
             ha="left", va="top",
-            fontsize=20, fontweight="900",
+            fontsize=20, fontweight="800",
             color=TITLE, fontfamily=FONT_TITLE_FAMILY
         )
 
@@ -1749,7 +1749,7 @@ else:
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
             fig.text(left_margin, y_fig, lab,
                      ha="left", va="center",
-                     fontsize=10, fontweight="bold",
+                     fontsize=10, fontweight="semibold",
                      color=LABEL, fontfamily=FONT_BOOK_FAMILY)
 
         # Bottom ticks on the last panel
