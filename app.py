@@ -1524,6 +1524,17 @@ def _font_name_or_fallback(pref_names, fallback="DejaVu Sans"):
             return n
     return fallback
 
+def _fmt_num(val, decimals=1):
+    """Format a value as a number with given decimals; pass-through if not numeric."""
+    try:
+        f = float(val)
+        # avoid trailing .0 if an integer value
+        if abs(f - round(f)) < 1e-9 and decimals >= 0:
+            return f"{int(round(f))}"
+        return f"{f:.{decimals}f}"
+    except Exception:
+        return str(val)
+
 # --- fonts (Tableau-like families + explicit hierarchy) ---
 FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold", "Tableau"])
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
@@ -1554,10 +1565,22 @@ else:
     except Exception:
         age = age_raw
 
-    games   = _safe_get(player_row, "Games", _safe_get(player_row, "Apps", "32"))
-    minutes = _safe_get(player_row, "Minutes", _safe_get(player_row, "Minutes played", "—"))
-    goals   = _safe_get(player_row, "Goals", "3")
-    assists = _safe_get(player_row, "Assists", "2")
+    # Use 'Matches played' for games, with robust fallbacks
+    games = _safe_get(player_row, "Matches played",
+             _safe_get(player_row, "Games",
+             _safe_get(player_row, "Apps", "—")))
+    # Minutes (keep your existing fallback)
+    minutes = _safe_get(player_row, "Minutes",
+               _safe_get(player_row, "Minutes played", "—"))
+
+    # Goals / Assists, and show xG / xA beside them
+    goals   = _safe_get(player_row, "Goals", "—")
+    assists = _safe_get(player_row, "Assists", "—")
+    xg_raw  = _safe_get(player_row, "xG", "—")
+    xa_raw  = _safe_get(player_row, "xA", "—")
+    xg = _fmt_num(xg_raw, 1) if xg_raw != "—" else xg_raw
+    xa = _fmt_num(xa_raw, 1) if xa_raw != "—" else xa_raw
+
     foot    = _safe_get(player_row, "Foot", _safe_get(player_row, "Preferred Foot", "—"))
 
     # ----- assemble sections -----
@@ -1637,7 +1660,7 @@ else:
     LEFT = BASE_LEFT + GLOBAL_LEFT_PAD
 
     # Optical nudge ONLY for the bold title (compensates font side-bearing)
-    TITLE_LEFT_NUDGE = - 0.001      # tweak 0.003–0.006 as needed
+    TITLE_LEFT_NUDGE = -0.001      # tweak if needed
 
     TOP, BOT = 0.035, 0.07
     header_h, GAP = 0.06, 0.020
@@ -1673,8 +1696,8 @@ else:
             ("Age: ",      age),
             ("Games: ",    games),
             ("Minutes: ",  minutes),
-            ("Goals: ",    goals),
-            ("Assists: ",  assists),
+            ("Goals: ",    f"{goals} (xG: {xg})"),
+            ("Assists: ",  f"{assists} (xA: {xa})"),
             ("Foot: ",     foot),
         ]
         sep = "  |  "
@@ -1740,8 +1763,9 @@ else:
                                        color=pct_to_rgb(bar_w), ec="none", zorder=1.0))
 
             x_text = 1.0 if bar_w >= 3 else min(100.0, bar_w + 0.8)
-            ax.text(x_text, y, val_str, ha="left", va="center",
-                    color="#0B0B0B", fontproperties=BAR_VALUE_FP, zorder=2.0, clip_on=False)
+            ax.text(x_text, y, val_str,
+                    ha="left", va="center", color="#0B0B0B",
+                    fontproperties=BAR_VALUE_FP, zorder=2.0, clip_on=False)
 
         # 50% reference
         ax.axvline(50, color="#000000", ls=(0, (4, 4)), lw=1.5, alpha=0.7, zorder=3.5)
@@ -1749,8 +1773,8 @@ else:
         # Metric labels aligned to LEFT (figure coords)
         for i, (lab, _, _) in enumerate(tuples[::-1]):
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
-            fig.text(LEFT, y_fig, lab, ha="left", va="center",
-                     color=LABEL_C, fontproperties=LABEL_FP)
+            fig.text(LEFT, y_fig, lab,
+                     ha="left", va="center", color=LABEL_C, fontproperties=LABEL_FP)
 
         # Bottom tick marks and numbers (only last panel)
         if show_xticks:
