@@ -1529,7 +1529,7 @@ FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold",
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
 
 # Headline + section + labels
-TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=24)  # single-line title
+TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=22)  # title tuned down
 H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)  # section titles
 LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='semibold', size=10)  # metric labels (left gutter)
 
@@ -1562,7 +1562,7 @@ else:
     assists = _safe_get(player_row, "Assists", "2")
     foot    = _safe_get(player_row, "Foot", _safe_get(player_row, "Preferred Foot", "—"))
 
-    # ----- assemble sections from your existing calcs -----
+    # ----- sections from your calcs -----
     ATTACKING = []
     for lab, met in [
         ("Crosses", "Crosses per 90"),
@@ -1642,15 +1642,15 @@ else:
     top_margin, bot_margin    = 0.035, 0.07
     header_h, gap_between     = 0.06, 0.020
 
-    # Single-line title → tighter header block
-    title_row_h     = 0.065
-    header_block_h  = title_row_h + 0.010  # no subtitle row
+    # Single-line title → add a bit more headroom to prevent crowding
+    title_row_h     = 0.075         # increased from 0.065
+    header_block_h  = title_row_h + 0.020  # extra breathing room
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
     BAR_FRAC = 0.85
 
-    # gutter (kept constant)
+    # gutter (fixed)
     probe = fig.text(0, 0, "Successful Defensive Actions", fontsize=11, fontweight="bold", color=LABEL_C, alpha=0)
     fig.canvas.draw(); probe.remove()
     gutter = 0.215
@@ -1659,7 +1659,7 @@ else:
     x_center_plot = (left_margin + gutter + (1 - right_margin)) / 2.0
 
     # ----- header rows -----
-    # Title on one line: "Player Name | Team" with thin spaces around the pipe
+    # Title on one line with thin spaces around the pipe
     y_title_top = 1 - top_margin - 0.006
     fig.text(
         left_margin, y_title_top,
@@ -1668,9 +1668,9 @@ else:
         color=TITLE_C, fontproperties=TITLE_FP
     )
 
-    # Info row (Position, Age, Games, Minutes, Goals, Assists, Foot)
+    # Info row — lower slightly to avoid crowding the title
     def draw_info_pairs():
-        y = 1 - top_margin - title_row_h   # nudged up since there's no subtitle line
+        y = 1 - top_margin - title_row_h + 0.010   # nudged down by +0.01
         x = left_margin
         pairs = [
             ("Position: ", pos),
@@ -1823,6 +1823,7 @@ else:
     )
     plt.close(fig)
 # ============================ END — Feature Z ============================
+
 
 
 
