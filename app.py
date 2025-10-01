@@ -1538,8 +1538,8 @@ INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=1
 INFO_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=10)   # "31", "2548"...
 
 # Ticks / small text
-TICK_FP   = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)
-SMALL_FP  = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=9)
+TICK_FP   = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',    size=10)
+SMALL_FP  = FontProperties(family=FONT_BOOK_FAMILY, weight='medium', size=10)
 
 if player_row.empty:
     st.info("Pick a player above.")
@@ -1644,7 +1644,7 @@ else:
 
     # Single-line title → add a bit more headroom to prevent crowding
     title_row_h     = 0.075         # increased from 0.065
-    header_block_h  = title_row_h + 0.02  # extra breathing room
+    header_block_h  = title_row_h + 0.00  # extra breathing room
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
