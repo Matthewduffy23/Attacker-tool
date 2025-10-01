@@ -1529,12 +1529,12 @@ FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold",
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
 
 # Use FontProperties for proper weights
-TITLE_FP = FontProperties(family=FONT_TITLE_FAMILY, weight='bold', size=22)
+TITLE_FP = FontProperties(family=FONT_TITLE_FAMILY, weight='bold', size=20)
 H2_FP    = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)
-LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='semibold', size=10)
+LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular', size=10)
 TEXT_FP  = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=10)
-TICK_FP  = FontProperties(family=FONT_BOOK_FAMILY,  weight='bold',     size=10)
-SMALL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=9)
+TICK_FP  = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=10)
+SMALL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=8)
 
 if player_row.empty:
     st.info("Pick a player above.")
