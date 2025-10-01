@@ -1529,18 +1529,16 @@ FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold",
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
 
 # Headline + section + labels
-TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=24)  # player name
-SUBTITLE_FP  = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=18)  # team
+TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=24)  # single-line title
 H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)  # section titles
 LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='semibold', size=10)  # metric labels (left gutter)
 
 # Info row (independent from metric labels)
-INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)  # "Age:", "Games:"...
-INFO_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=10)  # "31", "2548"...
+INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)   # "Age:", "Games:"...
+INFO_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=10)   # "31", "2548"...
 
 # Ticks / small text
 TICK_FP   = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)
-TEXT_FP   = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=10)
 SMALL_FP  = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=9)
 
 if player_row.empty:
@@ -1644,16 +1642,15 @@ else:
     top_margin, bot_margin    = 0.035, 0.07
     header_h, gap_between     = 0.06, 0.020
 
-    # We’ll stack name + team, so give a little more height to the header block
-    title_row_h     = 0.080
-    sub_row_h       = 0.045
-    header_block_h  = title_row_h + sub_row_h + 0.012
+    # Single-line title → tighter header block
+    title_row_h     = 0.065
+    header_block_h  = title_row_h + 0.010  # no subtitle row
 
     rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
     BAR_FRAC = 0.85
 
-    # gutter (kept constant for now)
+    # gutter (kept constant)
     probe = fig.text(0, 0, "Successful Defensive Actions", fontsize=11, fontweight="bold", color=LABEL_C, alpha=0)
     fig.canvas.draw(); probe.remove()
     gutter = 0.215
@@ -1662,18 +1659,18 @@ else:
     x_center_plot = (left_margin + gutter + (1 - right_margin)) / 2.0
 
     # ----- header rows -----
-    # Title (better than pipes): two lines — bold Name, semibold Team
+    # Title on one line: "Player Name | Team" with thin spaces around the pipe
     y_title_top = 1 - top_margin - 0.006
-    fig.text(left_margin, y_title_top, name,
-             ha="left", va="top", color=TITLE_C, fontproperties=TITLE_FP)
+    fig.text(
+        left_margin, y_title_top,
+        f"{name}\u2009|\u2009{team}",
+        ha="left", va="top",
+        color=TITLE_C, fontproperties=TITLE_FP
+    )
 
-    y_subtitle = y_title_top - (title_row_h * 0.55)
-    fig.text(left_margin, y_subtitle, team,
-             ha="left", va="top", color=TITLE_C, fontproperties=SUBTITLE_FP)
-
-    # Info row: Position, Age, Games, Minutes, Goals, Assists, Foot
+    # Info row (Position, Age, Games, Minutes, Goals, Assists, Foot)
     def draw_info_pairs():
-        y = 1 - top_margin - title_row_h - (sub_row_h * 0.35)
+        y = 1 - top_margin - title_row_h   # nudged up since there's no subtitle line
         x = left_margin
         pairs = [
             ("Position: ", pos),
@@ -1750,11 +1747,7 @@ else:
                                        color=pct_to_rgb(bar_w), ec="none", zorder=1.0))
 
             left_pad = 1.0
-            if bar_w >= left_pad + 2:
-                x_text = left_pad
-            else:
-                x_text = min(100.0, bar_w + 0.8)
-
+            x_text = left_pad if bar_w >= left_pad + 2 else min(100.0, bar_w + 0.8)
             ax.text(x_text, y, val_str,
                     ha="left", va="center",
                     color="#0B0B0B", fontproperties=SMALL_FP,
