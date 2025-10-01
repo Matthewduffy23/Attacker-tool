@@ -1531,16 +1531,16 @@ FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tab
 # Headline + section + labels
 TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=22)  # single-line title
 H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)  # section titles
-LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='semibold', size=10)  # metric labels (left gutter)
+LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='medium', size=10)  # metric labels (left gutter)
 
 # Info row (independent from metric labels)
 INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)   # "Age:", "Games:"...
 INFO_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=10)   # "31", "2548"...
 
 # Values, ticks, footer — all independent now
-BAR_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=9)     # values inside bars
-TICK_FP      = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)    # numbers along bottom axis
-FOOTER_FP    = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',  size=10)    # "Percentile Rank" label
+BAR_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=8)     # values inside bars
+TICK_FP      = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',    size=10)    # numbers along bottom axis
+FOOTER_FP    = FontProperties(family=FONT_BOOK_FAMILY, weight='semibold',  size=10)    # "Percentile Rank" label
 
 if player_row.empty:
     st.info("Pick a player above.")
@@ -1639,7 +1639,7 @@ else:
     fig = plt.figure(figsize=(10, 8), dpi=100)
     fig.patch.set_facecolor(PAGE_BG)
 
-    left_margin, right_margin = 0.035, 0.020
+    left_margin, right_margin = 0.025, 0.020
     top_margin, bot_margin    = 0.035, 0.07
     header_h, gap_between     = 0.06, 0.020
 
