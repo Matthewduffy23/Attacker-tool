@@ -1531,7 +1531,7 @@ FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tab
 # Use FontProperties for proper weights
 TITLE_FP = FontProperties(family=FONT_TITLE_FAMILY, weight='bold', size=20)
 H2_FP    = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)
-LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular', size=10)
+LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='semibold', size=11)
 TEXT_FP  = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=10)
 TICK_FP  = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=10)
 SMALL_FP = FontProperties(family=FONT_BOOK_FAMILY,  weight='regular',  size=8)
