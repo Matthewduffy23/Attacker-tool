@@ -1524,20 +1524,20 @@ def _font_name_or_fallback(pref_names, fallback="DejaVu Sans"):
             return n
     return fallback
 
-# --- fonts (Tableau-like families + explicit hierarchy) ---
+# --- fonts ---
 FONT_TITLE_FAMILY = _font_name_or_fallback(["Tableau Bold", "Tableau Sans Bold", "Tableau"])
 FONT_BOOK_FAMILY  = _font_name_or_fallback(["Tableau Book", "Tableau Sans", "Tableau"])
 
-TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=22)
-H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)
-LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='medium', size=10)
+TITLE_FP     = FontProperties(family=FONT_TITLE_FAMILY, weight='bold',     size=22)  # Player Name | Team
+H2_FP        = FontProperties(family=FONT_TITLE_FAMILY, weight='semibold', size=20)  # Attacking/Defensive/Possession
+LABEL_FP     = FontProperties(family=FONT_BOOK_FAMILY,  weight='medium',   size=10)  # Metric names (left gutter)
 
-INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',    size=10)
-INFO_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=10)
+INFO_LABEL_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='bold',     size=10)  # "Age:"
+INFO_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular',  size=10)  # "31"
 
-BAR_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular', size=8)
-TICK_FP      = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',    size=10)
-FOOTER_FP    = FontProperties(family=FONT_BOOK_FAMILY, weight='semibold',  size=10)
+BAR_VALUE_FP = FontProperties(family=FONT_BOOK_FAMILY, weight='regular',   size=8)   # numbers inside bars
+TICK_FP      = FontProperties(family=FONT_BOOK_FAMILY, weight='medium',    size=10)  # 0..100 along bottom
+FOOTER_FP    = FontProperties(family=FONT_BOOK_FAMILY, weight='semibold',  size=10)  # "Percentile Rank"
 
 if player_row.empty:
     st.info("Pick a player above.")
@@ -1547,10 +1547,9 @@ else:
     name    = _safe_get(player_row, "Player", _safe_get(player_row, "Name", "Kadeem Harris"))
     team    = _safe_get(player_row, "Team", "Carlisle United")
 
-    # Age as whole number
     age_raw = _safe_get(player_row, "Age", "31.0")
     try:
-        age = f"{float(age_raw):.0f}"
+        age = f"{float(age_raw):.0f}"   # whole number
     except Exception:
         age = age_raw
 
@@ -1560,7 +1559,7 @@ else:
     assists = _safe_get(player_row, "Assists", "2")
     foot    = _safe_get(player_row, "Foot", _safe_get(player_row, "Preferred Foot", "—"))
 
-    # ----- assemble sections -----
+    # ----- sections (your metrics) -----
     ATTACKING = []
     for lab, met in [
         ("Crosses", "Crosses per 90"),
@@ -1631,13 +1630,13 @@ else:
         v = float(np.clip(v, 0, 100))
         return _blend(TAB_RED, TAB_GOLD, v/50.0) if v <= 50 else _blend(TAB_GOLD, TAB_GREEN, (v-50.0)/50.0)
 
-    # ----- layout -----
-    EXTRA_LEFT_PAD = 0.02  # ✅ global left padding
-    base_left_margin, right_margin = 0.035, 0.020
-    left_margin = base_left_margin + EXTRA_LEFT_PAD
+    # ----- layout (unified left padding for EVERYTHING) -----
+    GLOBAL_LEFT_PAD = 0.02          # 2% extra left padding; change to 0.20 if you truly want 20%
+    BASE_LEFT, RIGHT = 0.035, 0.020
+    LEFT = BASE_LEFT + GLOBAL_LEFT_PAD   # <- single source of truth used everywhere
 
-    top_margin, bot_margin    = 0.035, 0.07
-    header_h, gap_between     = 0.06, 0.020
+    TOP, BOT = 0.035, 0.07
+    header_h, GAP = 0.06, 0.020
 
     title_row_h     = 0.075
     header_block_h  = title_row_h + 0.020
@@ -1646,30 +1645,24 @@ else:
     fig = plt.figure(figsize=(10, 8), dpi=100)
     fig.patch.set_facecolor(PAGE_BG)
 
-    rows_space_total = 1 - (top_margin + bot_margin) - header_block_h - header_h * len(sections) - gap_between * (len(sections) - 1)
+    rows_space_total = 1 - (TOP + BOT) - header_block_h - header_h * len(sections) - GAP * (len(sections) - 1)
     row_slot = rows_space_total / max(total_rows, 1)
     BAR_FRAC = 0.85
 
-    probe = fig.text(0, 0, "Successful Defensive Actions", fontsize=11, fontweight="bold", color=LABEL_C, alpha=0)
-    fig.canvas.draw(); probe.remove()
+    # Width reserved for metric labels before bars begin (keeps readability)
     gutter = 0.215
 
     ticks = np.arange(0, 101, 10)
-    x_center_plot = (left_margin + gutter + (1 - right_margin)) / 2.0
+    x_center_plot = (LEFT + gutter + (1 - RIGHT)) / 2.0
 
-    # ----- HEADER -----
-    title_x = left_margin  # ✅ same for everything
-
-    y_title_top = 1 - top_margin - 0.006
-    fig.text(
-        title_x, y_title_top,
-        f"{name}\u2009|\u2009{team}",
-        ha="left", va="top",
-        color=TITLE_C, fontproperties=TITLE_FP
-    )
+    # ===== HEADER (title + info share the same LEFT) =====
+    title_x = LEFT
+    y_title_top = 1 - TOP - 0.006
+    fig.text(title_x, y_title_top, f"{name}\u2009|\u2009{team}",
+             ha="left", va="top", color=TITLE_C, fontproperties=TITLE_FP)
 
     def draw_info_pairs():
-        y = 1 - top_margin - title_row_h + 0.010
+        y = 1 - TOP - title_row_h + 0.010
         x = title_x
         pairs = [
             ("Position: ", pos),
@@ -1695,29 +1688,27 @@ else:
                 t3 = fig.text(x, y, sep, ha="left", va="top", color="#555555", fontproperties=INFO_VALUE_FP)
                 fig.canvas.draw(); bb3 = t3.get_window_extent(renderer=renderer)
                 x += (bb3.width / fig.bbox.width)
-
     draw_info_pairs()
 
-    fig.lines.append(plt.Line2D(
-        [left_margin, 1 - right_margin],
-        [1 - top_margin - header_block_h + 0.004] * 2,
-        transform=fig.transFigure, color=DIVIDER, lw=0.8, alpha=0.35
-    ))
+    # divider under header (uses LEFT)
+    fig.lines.append(plt.Line2D([LEFT, 1 - RIGHT],
+                                [1 - TOP - header_block_h + 0.004]*2,
+                                transform=fig.transFigure, color=DIVIDER, lw=0.8, alpha=0.35))
 
-    # ----- Panels -----
+    # ===== PANELS (section titles, metric labels, bars all respect LEFT) =====
     def draw_panel(panel_top, title, tuples, *, show_xticks=False, draw_bottom_divider=True):
         n = len(tuples)
         panel_h = header_h + n * row_slot
 
-        fig.text(left_margin, panel_top - 0.012, title,
+        # Section title aligned to LEFT
+        fig.text(LEFT, panel_top - 0.012, title,
                  ha="left", va="top", color=TITLE_C, fontproperties=H2_FP)
 
-        ax = fig.add_axes([
-            left_margin + gutter,
-            panel_top - header_h - n * row_slot,
-            1 - left_margin - right_margin - gutter,
-            n * row_slot
-        ])
+        # Axes: left aligned at LEFT + gutter (so bars line up consistently)
+        ax = fig.add_axes([LEFT + gutter,
+                           panel_top - header_h - n * row_slot,
+                           1 - LEFT - RIGHT - gutter,
+                           n * row_slot])
         ax.set_facecolor(AX_BG)
         ax.set_xlim(0, 100)
         ax.set_ylim(-0.5, n - 0.5)
@@ -1728,34 +1719,36 @@ else:
         ax.tick_params(axis="y", left=False,  labelleft=False,  length=0)
         ax.set_yticks([]); ax.get_yaxis().set_visible(False)
 
+        # Track backgrounds
         for i in range(n):
             ax.add_patch(plt.Rectangle((0, i - (BAR_FRAC/2)), 100, BAR_FRAC,
                                        color=TRACK, ec="none", zorder=0.5))
 
+        # Vertical grid
         for gx in ticks:
             ax.vlines(gx, -0.5, n - 0.5, colors=(0, 0, 0, 0.16), linewidth=0.8, zorder=0.75)
 
+        # Bars + values
         for i, (lab, pct, val_str) in enumerate(tuples[::-1]):
             y = i
             bar_w = float(np.clip(pct, 0.0, 100.0))
             ax.add_patch(plt.Rectangle((0, y - (BAR_FRAC / 2)), bar_w, BAR_FRAC,
                                        color=pct_to_rgb(bar_w), ec="none", zorder=1.0))
 
-            left_pad = 1.0
-            x_text = left_pad if bar_w >= left_pad + 2 else min(100.0, bar_w + 0.8)
-            ax.text(x_text, y, val_str,
-                    ha="left", va="center",
-                    color="#0B0B0B", fontproperties=BAR_VALUE_FP,
-                    zorder=2.0, clip_on=False)
+            x_text = 1.0 if bar_w >= 3 else min(100.0, bar_w + 0.8)
+            ax.text(x_text, y, val_str, ha="left", va="center",
+                    color="#0B0B0B", fontproperties=BAR_VALUE_FP, zorder=2.0, clip_on=False)
 
+        # 50% reference line
         ax.axvline(50, color="#000000", ls=(0, (4, 4)), lw=1.5, alpha=0.7, zorder=3.5)
 
+        # Metric labels aligned to LEFT (figure coords)
         for i, (lab, _, _) in enumerate(tuples[::-1]):
             y_fig = (panel_top - header_h - n * row_slot) + ((i + 0.5) * row_slot)
-            fig.text(left_margin, y_fig, lab,
-                     ha="left", va="center",
+            fig.text(LEFT, y_fig, lab, ha="left", va="center",
                      color=LABEL_C, fontproperties=LABEL_FP)
 
+        # Bottom tick marks and numbers (only last panel)
         if show_xticks:
             trans = ax.get_xaxis_transform()
             INNER_PCT_OFFSET_PT, EDGE_0, EDGE_100 = 7, 4, 10
@@ -1780,25 +1773,27 @@ else:
                     ax.text(gx, y_label, "%", transform=trans + offset_inner,
                             ha="left", va="top", color="#000000", fontproperties=TICK_FP)
 
+        # Divider under section
         if draw_bottom_divider:
             y0 = panel_top - panel_h - 0.008
-            fig.lines.append(plt.Line2D(
-                [left_margin, 1 - right_margin], [y0, y0],
-                transform=fig.transFigure, color=DIVIDER, lw=1.2, alpha=0.35
-            ))
+            fig.lines.append(plt.Line2D([LEFT, 1 - RIGHT], [y0, y0],
+                                        transform=fig.transFigure, color=DIVIDER, lw=1.2, alpha=0.35))
 
-        return panel_top - panel_h - gap_between
+        return panel_top - panel_h - GAP
 
-    y_top = 1 - top_margin - header_block_h
+    # Render
+    y_top = 1 - TOP - header_block_h
     for idx, (title, data) in enumerate(sections):
         is_last = (idx == len(sections) - 1)
         y_top = draw_panel(y_top, title, data, show_xticks=is_last, draw_bottom_divider=not is_last)
 
-    fig.text(x_center_plot, bot_margin * 0.1, "Percentile Rank",
+    # Footer caption
+    fig.text((LEFT + gutter + (1 - RIGHT))/2.0, BOT * 0.1, "Percentile Rank",
              ha="center", va="center", color=LABEL_C, fontproperties=FOOTER_FP)
 
     st.pyplot(fig, use_container_width=True)
 
+    # Download
     buf = BytesIO()
     fig.savefig(buf, format="png", dpi=130, bbox_inches="tight", facecolor=fig.get_facecolor())
     buf.seek(0)
@@ -1811,6 +1806,7 @@ else:
     )
     plt.close(fig)
 # ============================ END — Feature Z ============================
+
 
 
 
