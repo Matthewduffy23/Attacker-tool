@@ -2339,47 +2339,46 @@ with st.expander("Scatter settings", expanded=False):
 
 
 
-# ----------------- (B) COMPARISON RADAR — decile tick values (1dp) + light/dark theme + exact edge -----------------
+# ----------------- (B) COMPARISON RADAR — decile tick values (1dp) + light/dark theme + exact edge + centered/upright outside labels -----------------
+import re
+
 st.markdown("---")
 st.header("📊 Player Comparison Radar")
 
 DEFAULT_RADAR_METRICS = [
-        "Non-penalty goals per 90","xG per 90","Progressive runs per 90",
-        "Dribbles per 90","Successful dribbles, %","Touches in box per 90",
-        "Aerial duels won, %","Passes per 90",
-        "Accurate passes, %","Passes to final third per 90", "xA per 90"
+    "Non-penalty goals per 90","xG per 90","Touches in box per 90",
+    "Progressive runs per 90",
+    "Dribbles per 90","Successful dribbles, %",
+    "Passes per 90",
+    "Accurate passes, %","Passes to final third per 90","xA per 90","Aerial duels won, %",
 ]
 
 def _clean_radar_label(s: str) -> str:
     s = s.replace("Non-penalty goals per 90", "Non-Pen Goals")
-    s = s.replace("Progressive runs per 90", "Progressive Runs")
     s = s.replace("xG per 90", "xG").replace("xA per 90", "xA")
-    s = s.replace("Shots per 90", "Shots").replace("Passes per 90", "Passes")
-    s = s.replace("Touches in box per 90", "Touches in box").replace("Passes to final 3rd per 90", "Passes Final 3rd")
+    s = s.replace("Progressive runs per 90", "Progressive Runs").replace("Passes per 90", "Passes")
+    s = s.replace("Touches in box per 90", "Touches in Box").replace("Passes to final third per 90", "Passes to Final 3rd")
     s = s.replace("Successful dribbles, %", "Dribble %").replace("Accurate passes, %", "Pass %")
     return re.sub(r"\s*per\s*90", "", s, flags=re.I)
 
-# Theme
+# Theme selector
 with st.expander("Radar settings", expanded=False):
     radar_theme = st.radio("Theme", ["Light", "Dark"], index=0, horizontal=True, key="radar_theme")
 
 # Colors per theme
 if radar_theme == "Dark":
-    PAGE_BG = "#0a0f1c"   # page
-    AX_BG   = "#0a0f1c"   # chart panel
-    # lighter on the OUTSIDE, alternating toward center (unchanged)
+    PAGE_BG = "#0a0f1c"
+    AX_BG   = "#0a0f1c"
     GRID_BAND_OUTER = "#162235"
     GRID_BAND_INNER = "#0d1524"
-    # ONLY the OUTER ring outline brighter; inner ring outlines stay as before
     RING_COLOR_INNER = "#3a4050"
     RING_COLOR_OUTER = "#cbd5e1"
     LABEL_COLOR = "#f5f5f5"
     TICK_COLOR  = "#e5e7eb"
     MINUTES_CLR = "#f5f5f5"
 else:
-    PAGE_BG = "#ffffff"   # white outside the chart
-    AX_BG   = "#ebebeb"   # keep panel soft grey
-    # OUTERMOST band grey, then alternate inward
+    PAGE_BG = "#ffffff"
+    AX_BG   = "#ebebeb"
     GRID_BAND_OUTER = "#e5e7eb"
     GRID_BAND_INNER = "#ffffff"
     RING_COLOR_INNER = RING_COLOR_OUTER = "#d1d5db"
@@ -2466,6 +2465,10 @@ else:
                         import numpy as np
                         import pandas as pd
 
+                        def _tangent_rotation(ax, theta):
+                            """Tangential rotation in display space, respecting theta offset/direction."""
+                            return np.degrees(ax.get_theta_direction() * theta + ax.get_theta_offset()) - 90.0
+
                         def draw_radar(labels, A_r, B_r, ticks, headerA, subA, headerB, subB):
                             N = len(labels)
                             theta = np.linspace(0, 2*np.pi, N, endpoint=False)
@@ -2476,12 +2479,18 @@ else:
                             fig = plt.figure(figsize=(13.2, 8.0), dpi=260)
                             fig.patch.set_facecolor(PAGE_BG)
                             ax = plt.subplot(111, polar=True); ax.set_facecolor(AX_BG)
-                            ax.set_theta_offset(np.pi/2); ax.set_theta_direction(-1)
-                            ax.set_xticks(theta)
-                            ax.set_xticklabels(labels, fontsize=AXIS_FS, color=LABEL_COLOR, fontweight=600)
-                            ax.set_yticks([]); ax.grid(False); [s.set_visible(False) for s in ax.spines.values()]
 
-                            # radial bands (10 bands from INNER_HOLE to 100) – i=9 is OUTER band
+                            # Orientation like your original
+                            ax.set_theta_offset(np.pi/2)
+                            ax.set_theta_direction(-1)
+
+                            ax.set_xticks(theta)
+                            ax.set_xticklabels([])  # custom labels below
+                            ax.set_yticks([])
+                            ax.grid(False)
+                            [s.set_visible(False) for s in ax.spines.values()]
+
+                            # radial bands (10 bands from INNER_HOLE to 100)
                             ring_edges = np.linspace(INNER_HOLE, 100, 11)
                             for i in range(10):
                                 r0, r1 = ring_edges[i], ring_edges[i+1]
@@ -2507,6 +2516,22 @@ else:
                                             ha="center", va="center",
                                             fontsize=TICK_FS, color=TICK_COLOR, zorder=1.1)
 
+                            # --- Outside metric labels: centered, flipped only if upside-down, pushed further out ---
+                            OUTER_LABEL_R = 105.6  # distance from outer ring; try 105.0–107.0
+                            for ang, lab in zip(theta, labels):
+                                rot = _tangent_rotation(ax, ang)  # tangential angle in display space
+                                # Keep text upright: flip if rotation would be upside-down
+                                rot_norm = ((rot + 180.0) % 360.0) - 180.0
+                                if rot_norm > 90 or rot_norm < -90:
+                                    rot += 180.0
+                                ax.text(
+                                    ang, OUTER_LABEL_R, lab,
+                                    rotation=rot, rotation_mode="anchor",
+                                    ha="center", va="center",
+                                    fontsize=AXIS_FS, color=LABEL_COLOR, fontweight=600,
+                                    clip_on=False, zorder=2.2
+                                )
+
                             # center hole
                             ax.add_artist(Circle((0,0), radius=INNER_HOLE-0.6, transform=ax.transData._b,
                                                  color=PAGE_BG, zorder=1.2, ec="none"))
@@ -2516,7 +2541,9 @@ else:
                             ax.fill(theta_c, Ar, color=FILL_A, zorder=2.5)
                             ax.plot(theta_c, Br, color=COL_B, lw=2.2, zorder=3)
                             ax.fill(theta_c, Br, color=FILL_B, zorder=2.5)
-                            ax.set_rlim(0, 100)  # edge of graph = 100th percentile ring (no extra margin)
+
+                            # keep edge exactly at 100; labels allowed outside via clip_on=False
+                            ax.set_rlim(0, 100)
 
                             # headers (teams / leagues / minutes)
                             minsA = f"{int(pd.to_numeric(rowA.get('Minutes played',0))):,} mins" if pd.notna(rowA.get('Minutes played')) else "Minutes: N/A"
@@ -2529,6 +2556,7 @@ else:
                             fig.text(0.88, 0.96,  headerB, color=COL_B, fontsize=TITLE_FS, fontweight="bold", ha="right")
                             fig.text(0.88, 0.935, subB, color=COL_B, fontsize=SUB_FS, ha="right")
                             fig.text(0.88, 0.915, minsB, color=MINUTES_CLR, fontsize=10, ha="right")
+
                             return fig
 
                         fig_r = draw_radar(
@@ -2538,11 +2566,11 @@ else:
                         )
                         st.caption(
                             "Ring labels show the **actual dataset values** at each decile (0–100th), rounded to **1 decimal place**. "
-                            "Dark theme: only the **outermost ring outline** is brighter; inner outlines remain subtle. "
-                            "Light theme: outer band is grey and alternates inward."
+                            "Axis labels are centered on their metric angle, auto-flipped upright, and placed outside the 100 ring."
                         )
                         st.pyplot(fig_r, use_container_width=True)
 # ----------------- END Radar -----------------
+
 
 
 
