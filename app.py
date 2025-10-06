@@ -88,17 +88,46 @@ POLAR_METRICS = [
 "Passes per 90", "Accurate passes, %","xA per 90","Progressive runs per 90",
 ]
 
-# -------- Position filter (attacker) --------
-# Define the prefixes that truly need startswith
-prefixes = ('RWF', 'LWF', 'LAMF', 'RAMF', 'AMF', 'RW, ', 'LW, ')
+# --- in your Attacker app, replace the position filter block with this ---
 
-def position_filter(pos):
-    pos_clean = str(pos).strip().upper()
-    if pos_clean in ('RW', 'LW'):      # exact match for RW and LW
-        return True
-    if pos_clean.startswith(prefixes): # startswith for others
-        return True
-    return False
+import re
+
+# 1) Sidebar control (dataset-scoped key)
+attacker_side = st.sidebar.radio(
+    "Attacker role to include",
+    ["All", "Left Wingers", "Right Wingers", "Attacking Midfielders"],
+    index=0,
+    key=f"attacker_side_{selected_file}",
+)
+
+# 2) Tokenizer: split positions into clean tokens (e.g., "RW, ST" -> ["RW","ST"])
+SEP_RE = re.compile(r"[ ,;/\-\|]+")  # commas, spaces, slashes, dashes, pipes...
+def pos_tokens(pos) -> list[str]:
+    return [t for t in SEP_RE.split(str(pos).strip().upper()) if t]
+
+# 3) Allowed token sets (no prefixes = no accidental RWB when you mean RW)
+LEFT_TOKENS    = {"LW", "LWF", "LAMF"}
+RIGHT_TOKENS   = {"RW", "RWF", "RAMF"}      # NOTE: no "RW*" prefix, so RWB won't match
+AMF_TOKENS     = {"AMF"}
+ALL_TOKENS     = LEFT_TOKENS | RIGHT_TOKENS | AMF_TOKENS
+
+if attacker_side == "Left Wingers":
+    ALLOWED = LEFT_TOKENS
+elif attacker_side == "Right Wingers":
+    ALLOWED = RIGHT_TOKENS
+elif attacker_side == "Attacking Midfielders":
+    ALLOWED = AMF_TOKENS
+else:
+    ALLOWED = ALL_TOKENS
+
+# 4) Predicate: does any token fall in the allowed set?
+def position_filter(pos) -> bool:
+    return any(t in ALLOWED for t in pos_tokens(pos))
+
+# 5) Apply filter to your working dataframe
+df_f = df_f[df_f["Position"].astype(str).map(position_filter)]
+
+
 # -------------------------------------------
 
 # Role buckets
